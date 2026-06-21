@@ -147,6 +147,7 @@ export default function Profile() {
               )}
             </div>
           </TiltCard>
+        </div>
 
         {/* Main Content */}
         <div className="space-y-6">
