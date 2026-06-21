@@ -1,0 +1,121 @@
+/* button.css */
+:root {
+  --brand-500: #2a9d8f;
+  --brand-600: #1e8449;
+  --brand-700: #155724;
+  --brand-50: rgba(42, 157, 143, 0.1);
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-800: #1f2937;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand-500: #70d6bf;
+    --brand-600: #48c9b0;
+    --brand-700: #1abc9c;
+    --brand-50: rgba(112, 214, 191, 0.1);
+    --gray-100: #2d3748;
+    --gray-200: #1a202c;
+    --gray-800: #f7fafc;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border-radius: 0.75rem; /* 12px */
+  padding: 0.5rem 1rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Size modifiers */
+.btn-sm { font-size: 0.8125rem; padding: 0.375rem 0.75rem; }
+.btn-md { font-size: 0.9375rem; padding: 0.5rem 1rem; }
+.btn-lg { font-size: 1.0625rem; padding: 0.75rem 1.25rem; }
+
+/* Variant: Primary */
+.btn-primary {
+  background: var(--brand-500);
+  color: white;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.btn-primary:hover {
+  background: var(--brand-600);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+.btn-primary:active {
+  background: var(--brand-700);
+  transform: translateY(0);
+}
+
+/* Variant: Secondary */
+.btn-secondary {
+  background: white;
+  color: var(--brand-500);
+  border: 2px solid var(--brand-500);
+}
+.btn-secondary:hover {
+  background: var(--brand-50);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.btn-secondary:active {
+  background: var(--brand-100);
+}
+
+/* Variant: Ghost */
+.btn-ghost {
+  background: transparent;
+  color: var(--brand-500);
+  border: 2px solid transparent;
+}
+.btn-ghost:hover {
+  background: var(--brand-50);
+  transform: translateY(-2px);
+}
+.btn-ghost:active {
+  background: var(--brand-100);
+}
+
+/* Disabled */
+.btn-disabled,
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Focus ring for accessibility */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.4);
+}
+
+/* 3D depth interaction layered on top of the variant styles */
+.btn {
+  transform-style: preserve-3d;
+  transition: transform 0.25s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.25s ease, background-color 0.15s ease;
+}
+.btn:hover {
+  transform: perspective(600px) translateY(-3px) translateZ(6px) rotateX(6deg);
+}
+.btn:active {
+  transform: perspective(600px) translateY(0) translateZ(0) rotateX(0) scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn:hover,
+  .btn:active {
+    transform: none;
+  }
+}
