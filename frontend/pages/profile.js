@@ -251,6 +251,7 @@ export default function Profile() {
                     <p className="text-sm font-medium text-slate-900">{user.phone || 'Not linked'}</p>
                   </div>
                 </div>
+              </div>
               <div className="grid grid-cols-2 gap-6">
                 <Link href="/listings/mine" className="surface-card p-6 flex items-center gap-4 hover:border-brand-200 transition-colors group">
                   <div className="h-12 w-12 bg-brand-50 text-brand-600 rounded-xl flex items-center justify-center group-hover:bg-brand-100 transition-colors">

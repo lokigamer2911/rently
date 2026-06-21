@@ -54,7 +54,8 @@ export default function Inbox() {
                   <div className="text-right">
                     <FiArrowRight className="text-slate-200 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" size={20} />
                   </div>
-                </Link>
+                  </Link>
+                </TiltCard>
               );
             })}
           </div>
