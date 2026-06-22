@@ -64,13 +64,10 @@ const LandingPage = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Preview step for right‑hand 3D showcase (defaults to scroll‑based activeStep)
-  const [previewStep, setPreviewStep] = useState(0);
-
-  // Sync previewStep with scrolling activeStep
-  useEffect(() => {
-    setPreviewStep(activeStep);
-  }, [activeStep]);
+  // Hover-driven preview step for right‑hand 3D showcase
+  // null = nothing hovered → default to step 0
+  const [hoveredStep, setHoveredStep] = useState(null);
+  const previewStep = hoveredStep !== null ? hoveredStep : 0;
 
   const features = [
     {
@@ -257,8 +254,8 @@ const LandingPage = () => {
                     key={item.step}
                     data-idx={idx}
                     ref={(el) => (stepRefs.current[idx] = el)}
-                    onMouseEnter={() => setPreviewStep(idx)}
-                    onMouseLeave={() => setPreviewStep(activeStep)}
+                    onMouseEnter={() => setHoveredStep(idx)}
+                    onMouseLeave={() => setHoveredStep(null)}
                     className={`p-6 rounded-2xl border transition-all duration-300 cursor-pointer flex gap-4 items-start ${isActive
                       ? 'bg-white border-blue-500/30 shadow-[0_15px_30px_-15px_rgba(37,99,235,0.08)] scale-105'
                       : 'bg-white/40 border-slate-200/50 hover:bg-white/60 hover:border-slate-300 hover:scale-105'
