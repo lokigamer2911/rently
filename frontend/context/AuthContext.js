@@ -36,7 +36,17 @@ export function AuthProvider({ children }) {
     setUser(data.user);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Tell the server to increment tokenVersion — instantly invalidates this token
+    // and all other active sessions for this user across all devices
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        await api.post('/auth/logout'); // Fire-and-forget is fine; clears locally regardless
+      } catch {
+        // Even if the server call fails, clear locally so the UI logs out
+      }
+    }
     localStorage.removeItem('token');
     setUser(null);
     window.location.href = '/';

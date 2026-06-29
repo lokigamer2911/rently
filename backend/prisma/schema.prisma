@@ -19,6 +19,7 @@ model User {
   role          String         @default("USER")
   isVerified    Boolean        @default(false)
   isSuperhost   Boolean        @default(false)
+  tokenVersion  Int            @default(0)  // Incremented on logout to invalidate all active tokens
   idProofUrl    String?
   address       String?
   createdAt     DateTime       @default(now())

@@ -4,13 +4,21 @@ const { z } = require('zod');
 const prisma = require('../config/prisma');
 const admin = require('../config/firebase');
 const { signToken } = require('../utils/jwt');
+const { requireAuth } = require('../middleware/auth');
+
+// Password must be ≥8 chars, contain at least 1 letter AND 1 number/special char
+const strongPassword = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+  .regex(/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'Password must contain at least one number or special character');
 
 // Email + password signup
 router.post('/signup', async (req, res, next) => {
   try {
     const body = z.object({
       email: z.string().email(),
-      password: z.string().min(6),
+      password: strongPassword,
       name: z.string().min(1),
     }).parse(req.body);
 
@@ -30,7 +38,7 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = z.object({
       email: z.string().email(),
-      password: z.string().min(6),
+      password: z.string().min(1), // Login: no complexity check (allow existing accounts)
     }).parse(req.body);
 
     const user = await prisma.user.findUnique({ where: { email } });
@@ -84,6 +92,18 @@ router.post('/firebase', async (req, res, next) => {
     }
 
     res.json({ token: signToken(user), user: sanitize(user) });
+  } catch (e) { next(e); }
+});
+
+// Server-side logout — increments tokenVersion to invalidate ALL active tokens for this user
+// This means logging out on one device invalidates sessions on all other devices too
+router.post('/logout', requireAuth, async (req, res, next) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    res.json({ ok: true, message: 'Logged out successfully. All sessions have been terminated.' });
   } catch (e) { next(e); }
 });
 
