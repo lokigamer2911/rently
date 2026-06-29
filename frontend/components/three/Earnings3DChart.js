@@ -1,6 +1,6 @@
 import React, { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Environment, Html } from '@react-three/drei';
+import { Environment, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
 const barConfigs = [
@@ -12,26 +12,34 @@ const barConfigs = [
 
 function Bar({ position, targetH, label, value, color, delay }) {
   const meshRef = useRef();
+  // PERF FIX: Track convergence so we can exit the animation loop
+  const converged = useRef(false);
 
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || converged.current) return;
     const elapsed = state.clock.getElapsedTime();
     if (elapsed > delay) {
       // Smoothly lerp height scale Y
       const currentScaleY = meshRef.current.scale.y;
-      const targetScaleY = targetH;
-      const nextScaleY = THREE.MathUtils.lerp(currentScaleY, targetScaleY, 0.08);
+      const nextScaleY = THREE.MathUtils.lerp(currentScaleY, targetH, 0.08);
       meshRef.current.scale.y = nextScaleY;
       
       // Shift position so it grows from base
       meshRef.current.position.y = nextScaleY / 2 - 1.5;
+
+      // PERF FIX: Stop updating once bar has converged (diff < 0.001)
+      if (Math.abs(nextScaleY - targetH) < 0.001) {
+        meshRef.current.scale.y = targetH;
+        meshRef.current.position.y = targetH / 2 - 1.5;
+        converged.current = true;
+      }
     }
   });
 
   return (
     <group position={position}>
       {/* 3D Bar */}
-      <mesh ref={meshRef} position={[0, -1.5, 0]} scale={[1, 0.01, 1]} castShadow>
+      <mesh ref={meshRef} position={[0, -1.5, 0]} scale={[1, 0.01, 1]}>
         <boxGeometry args={[0.7, 1, 0.7]} />
         <meshPhysicalMaterial 
           color={color}
@@ -44,7 +52,7 @@ function Bar({ position, targetH, label, value, color, delay }) {
       
       {/* Floating Tooltip HTML Overlay */}
       <Html position={[0, targetH - 1.4, 0]} center distanceFactor={5.2} style={{ transition: 'all 0.5s ease' }}>
-        <div className="flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl bg-white/95 border border-emerald-100 shadow-[0_12px_24px_-10px_rgba(4,120,87,0.15)] text-[10px] font-bold text-slate-800 whitespace-nowrap animate-pulse">
+        <div className="flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl bg-white/95 border border-emerald-100 shadow-[0_12px_24px_-10px_rgba(4,120,87,0.15)] text-[10px] font-bold text-slate-800 whitespace-nowrap">
           <span className="text-emerald-600 font-extrabold">{value}</span>
           <span className="text-[8px] text-slate-400 font-semibold">{label}</span>
         </div>
@@ -97,6 +105,8 @@ export default function Earnings3DChart() {
     <div className="w-full h-96 relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-50/50 to-emerald-50/20 border border-emerald-100/50 shadow-inner flex items-center justify-center">
       <Canvas
         shadows
+        // PERF FIX: Cap DPR to 1.5 to avoid over-rendering on high-pixel-density screens
+        dpr={[1, 1.5]}
         camera={{ position: [0, 1.2, 4.8], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
         style={{ width: '100%', height: '100%', background: 'transparent' }}
@@ -106,7 +116,8 @@ export default function Earnings3DChart() {
           position={[4, 6, 3]} 
           intensity={1.8} 
           castShadow 
-          shadow-mapSize={[1024, 1024]}
+          // PERF FIX: Reduced shadow map from 1024² to 512² (saves 75% shadow map VRAM)
+          shadow-mapSize={[512, 512]}
         />
         <directionalLight position={[-4, -2, -3]} intensity={0.4} color="#a7f3d0" />
         <Suspense fallback={null}>

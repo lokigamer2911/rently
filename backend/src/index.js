@@ -42,15 +42,36 @@ app.use(helmet({
   crossOriginOpenerPolicy: false,
 }));
 
-// Rate limiting: 100 requests per 15 minutes
-const limiter = rateLimit({
+// Tiered Rate Limiting
+// General API: 200 req / 15 min per IP
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 200,
   message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use('/api', limiter);
+
+// Auth endpoints: 10 req / 15 min per IP — brute force protection
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed attempts
+});
+
+// AI Suggest: 20 req / 15 min per IP
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'AI suggestion limit reached, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', generalLimiter);
 
 const server = http.createServer(app);
 
@@ -85,10 +106,11 @@ app.use(express.json({ limit: '5mb' }));
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/listings', listingRoutes);
+app.use('/api/listings/ai-suggest', aiLimiter); // Extra throttle on AI endpoint
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/upload', uploadRoutes);

@@ -3,6 +3,15 @@ const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
 
+// CUID v1/v2 regex — fast guard before hitting the DB
+const CUID_RE = /^c[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!CUID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+}
+
 function parseJsonArray(value) {
   try {
     const parsed = JSON.parse(value || '[]');
@@ -238,13 +247,14 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', validateId, async (req, res, next) => {
   try {
     const listing = await prisma.listing.findUnique({
       where: { id: req.params.id },
       include: {
         category: true,
-        owner: { select: { id: true, name: true, avatarUrl: true, bio: true, email: true, isVerified: true, isSuperhost: true } },
+        // NOTE: email/phone intentionally excluded from public response (privacy)
+        owner: { select: { id: true, name: true, avatarUrl: true, bio: true, isVerified: true, isSuperhost: true } },
         reviews: { include: { author: { select: { id: true, name: true, avatarUrl: true } } } },
       },
     });
@@ -277,7 +287,7 @@ router.post('/', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.patch('/:id', requireAuth, async (req, res, next) => {
+router.patch('/:id', validateId, requireAuth, async (req, res, next) => {
   try {
     const existing = await prisma.listing.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'Not found' });
@@ -292,7 +302,7 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.delete('/:id', requireAuth, async (req, res, next) => {
+router.delete('/:id', validateId, requireAuth, async (req, res, next) => {
   try {
     const existing = await prisma.listing.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'Not found' });
@@ -304,7 +314,7 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 });
 
 // Booked date ranges for availability calendar
-router.get('/:id/availability', async (req, res, next) => {
+router.get('/:id/availability', validateId, async (req, res, next) => {
   try {
     const listing = await prisma.listing.findUnique({
       where: { id: req.params.id },
@@ -321,7 +331,7 @@ router.get('/:id/availability', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/:id/alert', requireAuth, async (req, res, next) => {
+router.post('/:id/alert', validateId, requireAuth, async (req, res, next) => {
   try {
     const listingId = req.params.id;
     const userId = req.user.id;

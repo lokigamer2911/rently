@@ -1,4 +1,4 @@
-import { Suspense, useRef, useMemo, useEffect, useState } from 'react';
+import { Suspense, useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float, RoundedBox, Environment, ContactShadows, Torus, Icosahedron, Sparkles, Html } from '@react-three/drei';
 import * as THREE from 'three';
@@ -7,7 +7,7 @@ import * as THREE from 'three';
 function AccentRing({ position, color, rotation = [0, 0, 0], speed = 1.2 }) {
   return (
     <Float speed={speed} rotationIntensity={1.4} floatIntensity={0.8}>
-      <Torus args={[0.85, 0.14, 24, 64]} position={position} rotation={rotation} castShadow>
+      <Torus args={[0.85, 0.14, 16, 48]} position={position} rotation={rotation} castShadow>
         <meshPhysicalMaterial 
           color={color} 
           roughness={0.1} 
@@ -72,16 +72,18 @@ function FloatingProductCard({ position, emoji, title, category, price, delay = 
   );
 }
 
-// Group that gently follows the pointer for a parallax/3D feel. Also animates based on scroll.
+// Group that gently follows the pointer for a parallax/3D feel.
+// PERF FIX: scrollY stored in a ref (not state) to avoid re-renders on every scroll event.
 function ParallaxRig({ children, reduced }) {
   const group = useRef();
   const { pointer } = useThree();
-  const [scrollY, setScrollY] = useState(0);
+  // Use a ref so scroll events don't trigger React re-renders
+  const scrollYRef = useRef(0);
 
   useEffect(() => {
     if (reduced) return;
     const handleScroll = () => {
-      setScrollY(window.scrollY);
+      scrollYRef.current = window.scrollY;
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -94,8 +96,8 @@ function ParallaxRig({ children, reduced }) {
     const targetY = pointer.x * 0.45;
     const targetX = -pointer.y * 0.3;
     
-    // Scroll rotation/translation target
-    const scrollFactor = scrollY * 0.0006;
+    // Scroll rotation/translation target (read from ref, not state)
+    const scrollFactor = scrollYRef.current * 0.0006;
     
     group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, targetY + scrollFactor * 0.5, 2.5, delta);
     group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, targetX, 2.5, delta);
@@ -123,18 +125,19 @@ function Scene({ reduced }) {
 
   return (
     <ParallaxRig reduced={reduced}>
-      {/* Ambient environment sparkles */}
+      {/* Ambient environment sparkles — reduced count for perf, hidden in reduced mode */}
       {!reduced && (
-        <Sparkles count={55} scale={6.5} size={2.5} speed={0.4} opacity={0.45} color="#60a5fa" />
+        <Sparkles count={35} scale={6.5} size={2.5} speed={0.4} opacity={0.45} color="#60a5fa" />
       )}
 
       {/* Central hero shape: Premium refractive glass cube */}
+      {/* PERF FIX: smoothness 8→4 halves vertex count, visually identical at this scale */}
       <Float speed={0.9} rotationIntensity={0.5} floatIntensity={1.2}>
         <RoundedBox 
           ref={primaryCubeRef}
           args={[1.6, 1.6, 1.6]} 
           radius={0.25} 
-          smoothness={8} 
+          smoothness={4} 
           castShadow
         >
           <meshPhysicalMaterial 
@@ -196,22 +199,44 @@ function Scene({ reduced }) {
 }
 
 export default function HeroScene({ reduced = false }) {
+  // PERF FIX: IntersectionObserver pauses rendering when scene is off-screen
+  const containerRef = useRef();
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { threshold: 0.05 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // PERF FIX: Cap DPR to 1.5 max, 1.0 on mobile to prevent GPU overload
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const dpr = reduced || isMobile ? 1 : [1, 1.5];
+
   return (
-    <Canvas
-      shadows={!reduced}
-      dpr={reduced ? 1 : [1, 1.5]}
-      camera={{ position: [0, 0, 6.2], fov: 42 }}
-      gl={{ antialias: true, alpha: true }}
-      style={{ background: 'transparent' }}
-    >
-      <ambientLight intensity={0.65} />
-      <directionalLight position={[6, 8, 4]} intensity={1.2} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[-6, -4, -3]} intensity={0.5} color="#93c5fd" />
-      <pointLight position={[0, 4, 2]} intensity={0.8} color="#60a5fa" />
-      <Suspense fallback={null}>
-        <Scene reduced={reduced} />
-        <Environment preset="city" />
-      </Suspense>
-    </Canvas>
+    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+      <Canvas
+        shadows={!reduced}
+        dpr={dpr}
+        camera={{ position: [0, 0, 6.2], fov: 42 }}
+        gl={{ antialias: !isMobile, alpha: true }}
+        frameloop={isVisible ? 'always' : 'never'}
+        style={{ background: 'transparent' }}
+      >
+        <ambientLight intensity={0.65} />
+        <directionalLight position={[6, 8, 4]} intensity={1.2} castShadow shadow-mapSize={[512, 512]} />
+        <directionalLight position={[-6, -4, -3]} intensity={0.5} color="#93c5fd" />
+        <pointLight position={[0, 4, 2]} intensity={0.8} color="#60a5fa" />
+        <Suspense fallback={null}>
+          <Scene reduced={reduced} />
+          <Environment preset="city" />
+        </Suspense>
+      </Canvas>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { Suspense, useRef, useState, useCallback } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, RoundedBox, Torus, Cylinder, Box, Sphere, Ring, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -8,12 +8,6 @@ import * as THREE from 'three';
    to normalised [-1, 1] coords for the 3D scene.
    ───────────────────────────────────────────── */
 function useMouseTracker(mouseRef) {
-  const { viewport } = useThree();
-
-  useFrame(() => {
-    // mouseRef.current is set from the parent <div> onPointerMove
-  });
-
   return {
     // Convert normalised mouse [-1,1] to world-space offset
     getOffset: (strength = 1) => {
@@ -463,12 +457,20 @@ export default function Process3DShowcase({ activeStep = 0 }) {
   // Track mouse position as normalised [-1, 1] values
   const mouseRef = useRef({ x: 0, y: 0 });
 
+  // PERF FIX: Throttle mouse updates with rAF to avoid creating objects on every pointer event
+  const rafId = useRef(null);
   const handlePointerMove = useCallback((e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    mouseRef.current = {
-      x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      y: -(((e.clientY - rect.top) / rect.height) * 2 - 1),
-    };
+    if (rafId.current) return; // Skip if rAF already pending
+    rafId.current = requestAnimationFrame(() => {
+      const rect = e.currentTarget?.getBoundingClientRect();
+      if (rect) {
+        mouseRef.current = {
+          x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          y: -(((e.clientY - rect.top) / rect.height) * 2 - 1),
+        };
+      }
+      rafId.current = null;
+    });
   }, []);
 
   const handlePointerLeave = useCallback(() => {
@@ -484,6 +486,8 @@ export default function Process3DShowcase({ activeStep = 0 }) {
     >
       <Canvas
         camera={{ position: [0, 0, 4.0], fov: 45 }}
+        // PERF FIX: Cap DPR to 1.5 to avoid over-rendering on high-dpi screens
+        dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true }}
         style={{ width: '100%', height: '100%', background: 'transparent' }}
       >
