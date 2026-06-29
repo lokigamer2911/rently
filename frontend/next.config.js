@@ -2,7 +2,7 @@ const securityHeaders = [
   {
     key: 'Content-Security-Policy',
     // basic policy allowing standard Next.js resources, images from Cloudinary/Google, API calls to the backend, and Drei HDRI assets
-    value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://res.cloudinary.com https://lh3.googleusercontent.com https://raw.githubusercontent.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:5050 https://*.onrender.com https://*.vercel.app wss://* https://raw.githubusercontent.com;"
+    value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' blob: data: https://res.cloudinary.com https://lh3.googleusercontent.com https://raw.githubusercontent.com https://raw.githack.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:5050 https://*.onrender.com https://*.vercel.app wss://* https://raw.githubusercontent.com https://raw.githack.com;"
   },
   {
     key: 'X-Frame-Options',
