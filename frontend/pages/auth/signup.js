@@ -33,7 +33,8 @@ export default function Signup() {
       // 4. Update global state and redirect
       login(data);
       toast.success('Welcome to Rentrex!');
-      router.push('/');
+      const dest = router.query.redirect || '/listings';
+      router.push(dest);
     } catch (error) {
       console.error('Signup error:', error);
       toast.error(error.message || 'Failed to create account');

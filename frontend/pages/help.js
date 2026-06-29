@@ -131,7 +131,7 @@ export default function Help() {
   const handleTalkToHuman = async () => {
     if (!user) {
       toast.error('Please sign in to contact support');
-      return router.push('/auth/login');
+      return router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
     }
 
     try {

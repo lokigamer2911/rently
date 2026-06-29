@@ -24,7 +24,8 @@ export default function Login() {
 
   const finish = (data) => {
     login(data);
-    router.push('/');
+    const dest = router.query.redirect || '/listings';
+    router.push(dest);
   };
 
   const getGoogleErrorMessage = (error) => {

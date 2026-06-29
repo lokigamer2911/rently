@@ -14,7 +14,7 @@ export default function ListingCard({ l }) {
     e.preventDefault();
     if (!user) {
       toast.error('Please sign in to add items to your cart');
-      router.push('/auth/login');
+      router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
       return;
     }
     if (user.id === l.ownerId || user.id === l.owner?.id) {

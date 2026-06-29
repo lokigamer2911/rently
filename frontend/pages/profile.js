@@ -78,7 +78,7 @@ export default function Profile() {
 
   if (authLoading) return <div className="py-20 text-center">Loading...</div>;
   if (!user) {
-    if (typeof window !== 'undefined') router.push('/auth/login');
+    if (typeof window !== 'undefined') router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
     return null;
   }
 

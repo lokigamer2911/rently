@@ -65,7 +65,7 @@ export default function ListingDetail() {
   const handleAddToCart = () => {
     if (!user) {
       toast.error('Please sign in to add items to your cart');
-      router.push('/auth/login');
+      router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
       return;
     }
     const added = addToCart(listing);
@@ -439,7 +439,7 @@ export default function ListingDetail() {
                   <Button 
                     variant="ghost"
                     onClick={async () => {
-                      if (!user) return router.push('/auth/login');
+                      if (!user) return router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
                       try {
                         const { data } = await api.post('/chat/threads', { targetUserId: listing.ownerId });
                         router.push(`/chat/${data.id}`);
@@ -455,7 +455,7 @@ export default function ListingDetail() {
                   <Button 
                     variant="ghost"
                     onClick={async () => {
-                      if (!user) return router.push('/auth/login');
+                      if (!user) return router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
                       try {
                         await api.post(`/listings/${listing.id}/alert`);
                         toast.success("We'll alert you when this gear is free!");
