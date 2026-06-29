@@ -8,18 +8,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUser = async () => {
-    const token = typeof window !== 'undefined' && localStorage.getItem('token');
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
     try {
       const { data } = await api.get('/users/me');
       setUser(data);
     } catch (err) {
       if (err.response?.status === 401) {
-        localStorage.removeItem('token');
         setUser(null);
       }
     } finally {
@@ -32,22 +25,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (data) => {
-    if (data.token) localStorage.setItem('token', data.token);
+    // The backend now sets an HttpOnly cookie automatically.
     setUser(data.user);
   };
 
   const logout = async () => {
-    // Tell the server to increment tokenVersion — instantly invalidates this token
-    // and all other active sessions for this user across all devices
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        await api.post('/auth/logout'); // Fire-and-forget is fine; clears locally regardless
-      } catch {
-        // Even if the server call fails, clear locally so the UI logs out
-      }
+    // Tell the server to increment tokenVersion and clear the cookie
+    try {
+      await api.post('/auth/logout'); 
+    } catch {
+      // Ignore network errors on logout
     }
-    localStorage.removeItem('token');
     setUser(null);
     window.location.href = '/';
   };

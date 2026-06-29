@@ -16,6 +16,7 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -103,6 +104,7 @@ app.use(cors({
 // Razorpay webhook needs raw body — mount before json parser
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '5mb' }));
+app.use(cookieParser());
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 

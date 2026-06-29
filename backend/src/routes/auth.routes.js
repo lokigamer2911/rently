@@ -5,6 +5,7 @@ const prisma = require('../config/prisma');
 const admin = require('../config/firebase');
 const { signToken } = require('../utils/jwt');
 const { requireAuth } = require('../middleware/auth');
+const { cookieOptions } = require('../utils/cookie');
 
 // Password must be ≥8 chars, contain at least 1 letter AND 1 number/special char
 const strongPassword = z
@@ -29,7 +30,10 @@ router.post('/signup', async (req, res, next) => {
     const user = await prisma.user.create({
       data: { email: body.email, name: body.name, passwordHash },
     });
-    res.json({ token: signToken(user), user: sanitize(user) });
+    
+    const token = signToken(user);
+    res.cookie('token', token, cookieOptions);
+    res.json({ token, user: sanitize(user) });
   } catch (e) { next(e); }
 });
 
@@ -46,7 +50,9 @@ router.post('/login', async (req, res, next) => {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
-    res.json({ token: signToken(user), user: sanitize(user) });
+    const token = signToken(user);
+    res.cookie('token', token, cookieOptions);
+    res.json({ token, user: sanitize(user) });
   } catch (e) { next(e); }
 });
 
@@ -91,7 +97,9 @@ router.post('/firebase', async (req, res, next) => {
       });
     }
 
-    res.json({ token: signToken(user), user: sanitize(user) });
+    const token = signToken(user);
+    res.cookie('token', token, cookieOptions);
+    res.json({ token, user: sanitize(user) });
   } catch (e) { next(e); }
 });
 
@@ -103,6 +111,7 @@ router.post('/logout', requireAuth, async (req, res, next) => {
       where: { id: req.user.id },
       data: { tokenVersion: { increment: 1 } },
     });
+    res.clearCookie('token', cookieOptions);
     res.json({ ok: true, message: 'Logged out successfully. All sessions have been terminated.' });
   } catch (e) { next(e); }
 });
