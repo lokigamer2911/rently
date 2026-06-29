@@ -9,16 +9,16 @@
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.3",
-    "@react-three/drei": "^9.114.3",
-    "@react-three/fiber": "^8.17.10",
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.0.0",
     "axios": "^1.7.7",
     "firebase": "^10.14.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",
-    "next": "^14.2.15",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "next": "^15.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "react-hot-toast": "^2.4.1",
     "react-icons": "^5.6.0",
     "react-leaflet": "^4.2.1",
@@ -28,10 +28,10 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
-    "@next/swc-win32-x64-msvc": "^16.2.9",
+    "@next/swc-win32-x64-msvc": "^15.2.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.15",
+    "eslint-config-next": "^15.2.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14"
   }
