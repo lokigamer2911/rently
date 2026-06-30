@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
-import { getRedirectResult, signInWithPopup, signInWithPhoneNumber, signInWithEmailAndPassword, signInWithRedirect } from 'firebase/auth';
+import { getRedirectResult, signInWithPhoneNumber, signInWithEmailAndPassword, signInWithRedirect } from 'firebase/auth';
 import { FiArrowRight, FiPhone, FiShield, FiUser, FiZap } from 'react-icons/fi';
 import { auth, googleProvider, RecaptchaVerifier, firebaseInitError } from '../../lib/firebase';
 import { api } from '../../lib/api';
 import Button from '../../components/Button';
 import { useAuth } from '../../hooks/useAuth';
 import TiltCard from '../../components/TiltCard';
+import { setStoredAuthToken } from '../../lib/authToken';
 
 export default function Login() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function Login() {
   const initError = firebaseInitError || (auth === null ? 'Firebase Auth is not initialized' : null);
 
   const finish = (data) => {
+    setStoredAuthToken(data.token);
     login(data);
     const dest = router.query.redirect || '/listings';
     router.push(dest);
@@ -64,22 +66,10 @@ export default function Login() {
     if (!googleProvider) return toast.error('Google provider is not initialized. Check Firebase Console configuration.');
 
     try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      const idToken = await cred.user.getIdToken();
-      const { data } = await api.post('/auth/firebase', { idToken });
-      finish(data);
+      const cred = await signInWithRedirect(auth, googleProvider);
+      return cred;
     } catch (error) {
       console.error('Google sign-in error:', error);
-      if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/internal-error'].includes(error.code)) {
-        setIsGoogleRedirecting(true);
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return;
-        } catch (redirectError) {
-          console.error('Google redirect sign-in error:', redirectError);
-          setIsGoogleRedirecting(false);
-        }
-      }
       toast.error(getGoogleErrorMessage(error));
     }
   };

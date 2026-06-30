@@ -9,6 +9,7 @@ import { auth } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
 import TiltCard from '../../components/TiltCard';
+import { setStoredAuthToken } from '../../lib/authToken';
 
 export default function Signup() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function Signup() {
       const { data } = await api.post('/auth/firebase', { idToken });
       
       // 4. Update global state and redirect
+      setStoredAuthToken(data.token);
       login(data);
       toast.success('Welcome to Rentrex!');
       const dest = router.query.redirect || '/listings';

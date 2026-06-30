@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getStoredAuthToken } from './authToken';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
 export const api = axios.create({ 
@@ -7,8 +8,13 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((cfg) => {
-  // We no longer manually attach the Authorization header.
-  // The HttpOnly cookie is automatically attached by the browser.
+  const token = getStoredAuthToken();
+  if (token) {
+    cfg.headers = cfg.headers || {};
+    if (!cfg.headers.Authorization) {
+      cfg.headers.Authorization = `Bearer ${token}`;
+    }
+  }
   return cfg;
 });
 
