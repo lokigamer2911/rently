@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
-import { signInWithPopup, signInWithPhoneNumber, signInWithEmailAndPassword } from 'firebase/auth';
+import { getRedirectResult, signInWithPopup, signInWithPhoneNumber, signInWithEmailAndPassword, signInWithRedirect } from 'firebase/auth';
 import { FiArrowRight, FiPhone, FiShield, FiUser, FiZap } from 'react-icons/fi';
 import { auth, googleProvider, RecaptchaVerifier, firebaseInitError } from '../../lib/firebase';
 import { api } from '../../lib/api';
@@ -18,6 +18,7 @@ export default function Login() {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [confirmation, setConfirmation] = useState(null);
+  const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
 
   const { login } = useAuth();
   const initError = firebaseInitError || (auth === null ? 'Firebase Auth is not initialized' : null);
@@ -69,9 +70,49 @@ export default function Login() {
       finish(data);
     } catch (error) {
       console.error('Google sign-in error:', error);
+      if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/internal-error'].includes(error.code)) {
+        setIsGoogleRedirecting(true);
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectError) {
+          console.error('Google redirect sign-in error:', redirectError);
+          setIsGoogleRedirecting(false);
+        }
+      }
       toast.error(getGoogleErrorMessage(error));
     }
   };
+
+  useEffect(() => {
+    let active = true;
+
+    const handleRedirectResult = async () => {
+      if (!auth) return;
+      try {
+        const result = await getRedirectResult(auth);
+        if (!active || !result) return;
+
+        const idToken = await result.user.getIdToken();
+        const { data } = await api.post('/auth/firebase', { idToken });
+        finish(data);
+      } catch (error) {
+        console.error('Google redirect result error:', error);
+        if (active) {
+          toast.error(getGoogleErrorMessage(error));
+        }
+      } finally {
+        if (active) {
+          setIsGoogleRedirecting(false);
+        }
+      }
+    };
+
+    handleRedirectResult();
+    return () => {
+      active = false;
+    };
+  }, [auth]);
 
   const sendOtp = async () => {
     if (!auth) return toast.error('Firebase is not configured correctly.');
@@ -259,8 +300,8 @@ export default function Login() {
 
         <div className="my-6 text-center text-xs uppercase tracking-[0.24em] text-slate-400">or continue with</div>
 
-        <Button type="button" variant="secondary" onClick={googleLogin} className="w-full !py-3.5">
-          Google
+        <Button type="button" variant="secondary" onClick={googleLogin} className="w-full !py-3.5" disabled={isGoogleRedirecting}>
+          {isGoogleRedirecting ? 'Redirecting to Google...' : 'Google'}
         </Button>
 
         <p className="mt-6 text-sm text-slate-500">
