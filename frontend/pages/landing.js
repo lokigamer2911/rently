@@ -164,7 +164,13 @@ const LandingPage = () => {
                   Start Browsing
                   <FiArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <Button href="/listings/new" variant="secondary" className="!px-8 !py-4 text-base border-slate-200">
+                <Button
+                  href="/listings/new"
+                  requireAuth
+                  authMessage="Please sign in first to list an item or start hosting."
+                  variant="secondary"
+                  className="!px-8 !py-4 text-base border-slate-200"
+                >
                   <FiZap size={18} />
                   Become a Host
                 </Button>
@@ -320,7 +326,13 @@ const LandingPage = () => {
                 })}
               </div>
 
-              <Button href="/listings/new" variant="primary" className="!px-8 !py-4 text-base !bg-emerald-600 hover:!bg-emerald-700 shadow-emerald-600/10">
+              <Button
+                href="/listings/new"
+                requireAuth
+                authMessage="Please sign in first to list your first item."
+                variant="primary"
+                className="!px-8 !py-4 text-base !bg-emerald-600 hover:!bg-emerald-700 shadow-emerald-600/10"
+              >
                 List Your First Item
                 <FiArrowRight size={18} />
               </Button>

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
-import { getRedirectResult, signInWithPhoneNumber, signInWithEmailAndPassword, signInWithRedirect } from 'firebase/auth';
+import { getRedirectResult, onAuthStateChanged, signInWithPhoneNumber, signInWithEmailAndPassword, signInWithRedirect } from 'firebase/auth';
 import { FiArrowRight, FiPhone, FiShield, FiUser, FiZap } from 'react-icons/fi';
 import { auth, googleProvider, RecaptchaVerifier, firebaseInitError } from '../../lib/firebase';
 import { api } from '../../lib/api';
@@ -23,6 +23,7 @@ export default function Login() {
 
   const { login } = useAuth();
   const initError = firebaseInitError || (auth === null ? 'Firebase Auth is not initialized' : null);
+  const loginMessage = typeof router.query.message === 'string' ? router.query.message : 'Please sign in first to start using this feature.';
 
   const finish = (data) => {
     setStoredAuthToken(data.token);
@@ -66,24 +67,29 @@ export default function Login() {
     if (!googleProvider) return toast.error('Google provider is not initialized. Check Firebase Console configuration.');
 
     try {
-      const cred = await signInWithRedirect(auth, googleProvider);
-      return cred;
+      setIsGoogleRedirecting(true);
+      await signInWithRedirect(auth, googleProvider);
     } catch (error) {
       console.error('Google sign-in error:', error);
       toast.error(getGoogleErrorMessage(error));
+      setIsGoogleRedirecting(false);
     }
   };
 
   useEffect(() => {
     let active = true;
+    let unsubscribe = null;
 
     const handleRedirectResult = async () => {
-      if (!auth) return;
+      if (!auth || !router.isReady) return;
       try {
         const result = await getRedirectResult(auth);
-        if (!active || !result) return;
+        if (!active) return;
 
-        const idToken = await result.user.getIdToken();
+        const firebaseUser = result?.user || auth.currentUser;
+        if (!firebaseUser) return;
+
+        const idToken = await firebaseUser.getIdToken();
         const { data } = await api.post('/auth/firebase', { idToken });
         finish(data);
       } catch (error) {
@@ -98,11 +104,21 @@ export default function Login() {
       }
     };
 
-    handleRedirectResult();
+    if (auth && router.isReady) {
+      unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        if (!active) return;
+        if (firebaseUser && !isGoogleRedirecting) {
+          handleRedirectResult();
+        }
+      });
+      handleRedirectResult();
+    }
+
     return () => {
       active = false;
+      if (unsubscribe) unsubscribe();
     };
-  }, [auth]);
+  }, [auth, router.isReady]);
 
   const sendOtp = async () => {
     if (!auth) return toast.error('Firebase is not configured correctly.');
@@ -216,6 +232,10 @@ export default function Login() {
             <strong>Firebase configuration issue:</strong> {initError}
           </div>
         )}
+
+        <div className="mb-5 rounded-[1.4rem] border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800">
+          {loginMessage}
+        </div>
 
         {tab === 'email' ? (
           <form onSubmit={emailLogin} className="space-y-4">

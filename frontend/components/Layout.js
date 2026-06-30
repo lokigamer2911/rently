@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Navbar from './Navbar';
 import { Toaster } from 'react-hot-toast';
+import Button from './Button';
 
 export default function Layout({ children }) {
   return (
@@ -39,9 +40,15 @@ export default function Layout({ children }) {
                     </Link>
                   </li>
                   <li>
-                    <Link href="/listings/new" className="text-slate-500 hover:text-slate-900 transition">
+                    <Button
+                      href="/listings/new"
+                      requireAuth
+                      authMessage="Please sign in first to become a host."
+                      variant="ghost"
+                      className="!p-0 !h-auto !text-slate-500 hover:!text-slate-900 transition"
+                    >
                       Become Host
-                    </Link>
+                    </Button>
                   </li>
                   <li>
                     <Link href="/help" className="text-slate-500 hover:text-slate-900 transition">
@@ -121,7 +128,15 @@ export default function Layout({ children }) {
             <p>© {new Date().getFullYear()} Rently. All rights reserved. Transforming how communities share and rent gear.</p>
             <div className="flex gap-4">
               <Link href="/listings" className="text-slate-400 hover:text-slate-600 transition">Shop rentals</Link>
-              <Link href="/listings/new" className="text-slate-400 hover:text-slate-600 transition">Become host</Link>
+              <Button
+                href="/listings/new"
+                requireAuth
+                authMessage="Please sign in first to become a host."
+                variant="ghost"
+                className="!p-0 !h-auto !text-slate-400 hover:!text-slate-600 transition"
+              >
+                Become host
+              </Button>
             </div>
           </div>
         </div>
