@@ -47,9 +47,8 @@ router.post('/verify', requireAuth, async (req, res, next) => {
 
 router.get('/:id', requireAuth, async (req, res, next) => {
   try {
-    // Ensure the requested ID matches the authenticated user's ID
     if (req.params.id !== req.user.id) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(404).json({ error: 'Not found' });
     }
     const u = await prisma.user.findUnique({
       where: { id: req.params.id },

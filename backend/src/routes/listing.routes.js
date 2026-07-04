@@ -2,6 +2,7 @@ const router = require('express').Router();
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
+const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
 
 // CUID v1/v2 regex — fast guard before hitting the DB
 const CUID_RE = /^c[a-z0-9]{20,}$/i;
@@ -32,6 +33,10 @@ function normalizeListing(listing) {
     images: parseJsonArray(listing.images),
     blockedDates: parseJsonArray(listing.blockedDates)
   };
+}
+
+function getAccessToken(req) {
+  return req.query?.access || req.body?.access || null;
 }
 
 const ListingInput = z.object({
@@ -247,8 +252,31 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+router.post('/:id/access', requireAuth, async (req, res, next) => {
+  try {
+    const listing = await prisma.listing.findUnique({ where: { id: req.params.id } });
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
+
+    const isOwner = listing.ownerId === req.user.id;
+    const isRenter = await prisma.booking.findFirst({
+      where: { listingId: req.params.id, renterId: req.user.id },
+      select: { id: true },
+    });
+
+    if (!isOwner && !isRenter) return res.status(403).json({ error: 'Forbidden' });
+
+    const accessToken = createSignedResourceAccessToken(req.params.id, 'listing', req.user.id);
+    res.json({ accessToken });
+  } catch (e) { next(e); }
+});
+
 router.get('/:id', validateId, async (req, res, next) => {
   try {
+    const accessToken = getAccessToken(req);
+    if (accessToken && !verifySignedResourceAccessToken(accessToken, req.params.id, 'listing')) {
+      return res.status(403).json({ error: 'Invalid or expired access link' });
+    }
+
     const listing = await prisma.listing.findUnique({
       where: { id: req.params.id },
       include: {
@@ -289,6 +317,11 @@ router.post('/', requireAuth, async (req, res, next) => {
 
 router.patch('/:id', validateId, requireAuth, async (req, res, next) => {
   try {
+    const accessToken = getAccessToken(req);
+    if (accessToken && !verifySignedResourceAccessToken(accessToken, req.params.id, 'listing', req.user.id)) {
+      return res.status(403).json({ error: 'Invalid or expired access link' });
+    }
+
     const existing = await prisma.listing.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (existing.ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
@@ -304,6 +337,11 @@ router.patch('/:id', validateId, requireAuth, async (req, res, next) => {
 
 router.delete('/:id', validateId, requireAuth, async (req, res, next) => {
   try {
+    const accessToken = getAccessToken(req);
+    if (accessToken && !verifySignedResourceAccessToken(accessToken, req.params.id, 'listing', req.user.id)) {
+      return res.status(403).json({ error: 'Invalid or expired access link' });
+    }
+
     const existing = await prisma.listing.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'Not found' });
     if (existing.ownerId !== req.user.id && req.user.role !== 'ADMIN')
@@ -316,6 +354,11 @@ router.delete('/:id', validateId, requireAuth, async (req, res, next) => {
 // Booked date ranges for availability calendar
 router.get('/:id/availability', validateId, async (req, res, next) => {
   try {
+    const accessToken = getAccessToken(req);
+    if (accessToken && !verifySignedResourceAccessToken(accessToken, req.params.id, 'listing')) {
+      return res.status(403).json({ error: 'Invalid or expired access link' });
+    }
+
     const listing = await prisma.listing.findUnique({
       where: { id: req.params.id },
       select: { blockedDates: true },
