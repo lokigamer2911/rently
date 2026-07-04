@@ -15,6 +15,7 @@ export default function EditListing() {
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [accessToken, setAccessToken] = useState('');
   const [form, setForm] = useState({
     title: '', description: '', pricePerDay: '', deposit: '', city: '',
     address: '', lat: null, lng: null, images: [], blockedDates: [], categoryId: '',
@@ -27,9 +28,13 @@ export default function EditListing() {
 
     const fetchData = async () => {
       try {
+        const { data: accessData } = await api.post(`/listings/${id}/access`);
+        const nextAccessToken = accessData.accessToken || '';
+        setAccessToken(nextAccessToken);
+
         const [catRes, listingRes] = await Promise.all([
           api.get('/categories'),
-          api.get(`/listings/${id}`)
+          api.get(`/listings/${id}${nextAccessToken ? `?access=${encodeURIComponent(nextAccessToken)}` : ''}`)
         ]);
         
         setCats(catRes.data);
@@ -95,9 +100,9 @@ export default function EditListing() {
         pricePerDay: Math.round(Number(form.pricePerDay) * 100), 
         deposit: Math.round(Number(form.deposit || 0) * 100) 
       };
-      await api.patch(`/listings/${id}`, payload);
+      await api.patch(`/listings/${id}${accessToken ? `?access=${encodeURIComponent(accessToken)}` : ''}`, payload);
       toast.success('Listing updated!');
-      router.push(`/listings/${id}`);
+      router.push(`/listings/${id}${accessToken ? `?access=${encodeURIComponent(accessToken)}` : ''}`);
     } catch (err) { 
       toast.error(err.response?.data?.error || 'Failed to update'); 
     } finally {

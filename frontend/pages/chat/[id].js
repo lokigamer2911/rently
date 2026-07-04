@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { FiSend, FiArrowLeft, FiUser, FiInfo } from 'react-icons/fi';
-import io from 'socket.io-client';
 import useSWR from 'swr';
 import { fetcher, api } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
+import { getSocket, disconnectSocket } from '../../lib/socket';
 import Link from 'next/link';
 
 export default function Conversation() {
@@ -30,10 +30,19 @@ export default function Conversation() {
 
   // Initialize Socket.io
   useEffect(() => {
-    if (!user) return;
-    const token = localStorage.getItem('token');
-    const s = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000', {
-      auth: { token }
+    if (!user || !id) return;
+    const s = getSocket();
+
+    s.on('connect', () => {
+      console.debug('[chat] socket connected', s.id);
+    });
+
+    s.on('connect_error', (err) => {
+      console.error('[chat] socket connect_error', err.message || err);
+    });
+
+    s.on('error', (err) => {
+      console.error('[chat] socket error', err);
     });
 
     s.on('message:recv', (msg) => {
@@ -46,7 +55,13 @@ export default function Conversation() {
     });
 
     setSocket(s);
-    return () => s.disconnect();
+    return () => {
+      s.off('connect');
+      s.off('connect_error');
+      s.off('error');
+      s.off('message:recv');
+      disconnectSocket();
+    };
   }, [id, user]);
 
   const send = (e) => {

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
@@ -24,8 +24,10 @@ export default function ListingDetail() {
   const router = useRouter();
   const { user } = useAuth();
   const { id } = router.query;
-  const { data: listing } = useSWR(id && `/listings/${id}`, fetcher);
-  const { data: booked } = useSWR(id && `/listings/${id}/availability`, fetcher);
+  const [accessToken, setAccessToken] = useState('');
+  const accessParam = accessToken ? `?access=${encodeURIComponent(accessToken)}` : '';
+  const { data: listing } = useSWR(id ? `/listings/${id}${accessParam}` : null, fetcher);
+  const { data: booked } = useSWR(id ? `/listings/${id}/availability${accessParam}` : null, fetcher);
   const { addToCart } = useCart();
   const isOwner = user && listing && (
     user.id === listing.ownerId || 
@@ -37,6 +39,25 @@ export default function ListingDetail() {
   const [depositType, setDepositType] = useState('CASH');
   const [depositNote, setDepositNote] = useState('');
   const [showTerms, setShowTerms] = useState(false);
+
+  useEffect(() => {
+    if (!router.isReady || !id || !user || accessToken || router.query.access) return;
+
+    const issueAccessToken = async () => {
+      try {
+        const { data } = await api.post(`/listings/${id}/access`);
+        const nextAccessToken = data.accessToken;
+        if (nextAccessToken) {
+          setAccessToken(nextAccessToken);
+          router.replace({ pathname: router.pathname, query: { ...router.query, access: nextAccessToken } }, undefined, { shallow: true });
+        }
+      } catch {
+        // fall back to the public listing view if token issuance is unavailable
+      }
+    };
+
+    issueAccessToken();
+  }, [router.isReady, id, user, accessToken, router.pathname, router.query.access]);
   
   const getLocalDatetime = (date = new Date()) => {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);

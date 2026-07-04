@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { FiArrowRight, FiShield, FiZap } from 'react-icons/fi';
 import { api } from '../../lib/api';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { auth, firebaseInitError } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
 import TiltCard from '../../components/TiltCard';
@@ -14,24 +14,41 @@ import { setStoredAuthToken } from '../../lib/authToken';
 export default function Signup() {
   const router = useRouter();
   const { login } = useAuth();
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const initialEmail = typeof router.query.email === 'string' ? router.query.email : '';
+  const signupMessage = typeof router.query.message === 'string' && router.query.message.trim()
+    ? router.query.message
+    : '';
+  const [form, setForm] = useState({ name: '', email: initialEmail, password: '' });
+
+  useEffect(() => {
+    if (initialEmail) {
+      setForm((prev) => ({ ...prev, email: initialEmail }));
+    }
+  }, [initialEmail]);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!auth) return toast.error('Auth service not ready');
-    
+
     try {
-      // 1. Create user in Firebase
+      if (!auth || firebaseInitError) {
+        const { data } = await api.post('/auth/signup', {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+        });
+        setStoredAuthToken(data.token);
+        login(data);
+        toast.success('Welcome to Rentrex!');
+        const dest = router.query.redirect || '/listings';
+        router.push(dest);
+        return;
+      }
+
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      
-      // 2. Set display name in Firebase
       await updateProfile(cred.user, { displayName: form.name });
-      
-      // 3. Get idToken and exchange for our JWT
       const idToken = await cred.user.getIdToken();
       const { data } = await api.post('/auth/firebase', { idToken });
-      
-      // 4. Update global state and redirect
+
       setStoredAuthToken(data.token);
       login(data);
       toast.success('Welcome to Rentrex!');
@@ -39,7 +56,7 @@ export default function Signup() {
       router.push(dest);
     } catch (error) {
       console.error('Signup error:', error);
-      toast.error(error.message || 'Failed to create account');
+      toast.error(error.response?.data?.error || error.message || 'Failed to create account');
     }
   };
 
@@ -78,6 +95,12 @@ export default function Signup() {
             Set up your account to browse, book, host, and manage everything from one place.
           </p>
         </div>
+
+        {signupMessage && (
+          <div className="mb-5 rounded-[1.4rem] border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800">
+            {signupMessage}
+          </div>
+        )}
 
         <form onSubmit={submit} className="space-y-4">
           <input

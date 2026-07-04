@@ -73,6 +73,12 @@ export default function Cart() {
   });
 
   const proceedToCheckout = async () => {
+    if (!user) {
+      toast.error('Please sign in before checkout');
+      router.push('/auth/login?redirect=/cart');
+      return;
+    }
+
     const ownedItem = cart.find((item) => user && (user.id === item.ownerId || user.id === item.owner?.id));
     if (ownedItem) {
       toast.error(`You cannot rent your own item: ${ownedItem.title}`);
@@ -91,12 +97,6 @@ export default function Cart() {
       return;
     }
 
-    if (!user?.isVerified) {
-      toast.error('Identity verification required before checkout');
-      router.push('/auth/verify');
-      return;
-    }
-
     if (typeof window === 'undefined' || !window.Razorpay) {
       toast.error('Payment gateway is still loading. Please try again.');
       return;
@@ -109,6 +109,7 @@ export default function Cart() {
 
     setIsCheckingOut(true);
     try {
+      const successfulItems = [];
       for (const item of cart) {
         const dates = bookingDates[item.id];
         const { data: booking } = await api.post('/bookings', {
@@ -121,12 +122,14 @@ export default function Cart() {
         const { data: order } = await api.post('/payments/order', { bookingId: booking.id });
 
         await openCheckout(item, order);
-        removeFromCart(item.id);
+        successfulItems.push(item.id);
       }
 
+      successfulItems.forEach((id) => removeFromCart(id));
       router.push('/bookings');
     } catch (e) {
-      toast.error(e.response?.data?.error || e.message || 'Checkout failed');
+      const message = e.response?.data?.error || e.message || 'Checkout failed';
+      toast.error(message);
     } finally {
       setIsCheckingOut(false);
     }
@@ -249,30 +252,15 @@ export default function Cart() {
           ))}
         </div>
         <div className="mt-8 card space-y-4">
-          {!user?.isVerified && (
-            <div className="bg-amber-50 border border-amber-100 rounded-[1.2rem] p-4 flex items-center gap-3">
-              <div className="h-8 w-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0">
-                <FiShield size={16} />
-              </div>
-              <div className="text-xs">
-                <p className="font-bold text-amber-900 uppercase tracking-wider">Identity Check Pending</p>
-                <p className="text-amber-700 mt-0.5">Complete your security profile to unlock checkout.</p>
-              </div>
-              <Link href="/auth/verify" className="ml-auto text-xs font-bold text-amber-900 underline">Verify Now</Link>
+          <div className="bg-amber-50 border border-amber-100 rounded-[1.2rem] p-4 flex items-center gap-3">
+            <div className="h-8 w-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0">
+              <FiShield size={16} />
             </div>
-          )}
-          
-          {user?.isVerified && (
-            <div className="bg-emerald-50 border border-emerald-100 rounded-[1.2rem] p-4 flex items-center gap-3">
-              <div className="h-8 w-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
-                <FiCheckCircle size={16} />
-              </div>
-              <div className="text-xs">
-                <p className="font-bold text-emerald-900 uppercase tracking-wider">Verified Renter</p>
-                <p className="text-emerald-700 mt-0.5">Your identity is secured. Fast-track checkout enabled.</p>
-              </div>
+            <div className="text-xs">
+              <p className="font-bold text-amber-900 uppercase tracking-wider">KYC temporarily disabled</p>
+              <p className="text-amber-700 mt-0.5">Identity verification is not in use right now, so checkout stays available for all users.</p>
             </div>
-          )}
+          </div>
 
           <div className="space-y-2 border-b border-slate-100 pb-4">
             <div className="flex justify-between text-sm text-slate-600">
@@ -299,10 +287,10 @@ export default function Cart() {
             variant="primary"
             onClick={proceedToCheckout} 
             className="w-full"
-            disabled={isCheckingOut || !user?.isVerified} 
+            disabled={isCheckingOut} 
             type="button"
           >
-            {isCheckingOut ? 'Processing...' : user?.isVerified ? 'Proceed to Checkout' : 'Verification Required'}
+            {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
           </Button>
         </div>
       </div>

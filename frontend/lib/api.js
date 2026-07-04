@@ -1,7 +1,19 @@
 import axios from 'axios';
 import { getStoredAuthToken } from './authToken';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
+const getBaseURL = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+
+  if (typeof window === 'undefined') return '/api';
+
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5050/api';
+  }
+
+  return `${window.location.origin}/api`;
+};
+
+const baseURL = getBaseURL();
 export const api = axios.create({ 
   baseURL,
   withCredentials: true // Automatically send cookies with every request

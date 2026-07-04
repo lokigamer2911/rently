@@ -19,19 +19,20 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     try {
+      if (typeof window === 'undefined') return;
       const savedCart = localStorage.getItem('cart');
       if (savedCart) {
         setCart(normalizeCart(JSON.parse(savedCart)));
       }
     } catch {
-      localStorage.removeItem('cart');
+      if (typeof window !== 'undefined') localStorage.removeItem('cart');
     } finally {
       setIsHydrated(true);
     }
   }, []);
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || typeof window === 'undefined') return;
     localStorage.setItem('cart', JSON.stringify(cart));
   }, [cart, isHydrated]);
 

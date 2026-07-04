@@ -321,10 +321,31 @@ export default function ConditionTimeline({ bookingId, listingTitle, onClose }) 
 
   useEffect(() => {
     if (!bookingId) return;
+
+    let isActive = true;
     setLoading(true);
-    api.get(`/bookings/${bookingId}/timeline`)
-      .then(r => { setData(r.data); setLoading(false); })
-      .catch(err => { setError(err.response?.data?.error || 'Failed to load timeline'); setLoading(false); });
+
+    const loadTimeline = async () => {
+      try {
+        const { data: accessData } = await api.post(`/bookings/${bookingId}/access`);
+        const accessToken = accessData.accessToken;
+        const timelineUrl = accessToken
+          ? `/bookings/${bookingId}/timeline?access=${encodeURIComponent(accessToken)}`
+          : `/bookings/${bookingId}/timeline`;
+
+        const r = await api.get(timelineUrl);
+        if (!isActive) return;
+        setData(r.data);
+        setLoading(false);
+      } catch (err) {
+        if (!isActive) return;
+        setError(err.response?.data?.error || 'Failed to load timeline');
+        setLoading(false);
+      }
+    };
+
+    loadTimeline();
+    return () => { isActive = false; };
   }, [bookingId]);
 
   // Close on Escape key

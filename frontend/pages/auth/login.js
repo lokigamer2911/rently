@@ -27,6 +27,18 @@ export default function Login() {
     ? router.query.message
     : '';
 
+  const redirectToSignup = (submittedEmail) => {
+    const dest = typeof router.query.redirect === 'string' ? router.query.redirect : '/listings';
+    router.replace({
+      pathname: '/auth/signup',
+      query: {
+        redirect: dest,
+        email: submittedEmail || '',
+        message: 'No account found for this email. Please create an account first.'
+      }
+    });
+  };
+
   const finish = (data) => {
     setStoredAuthToken(data.token);
     login(data);
@@ -51,15 +63,31 @@ export default function Login() {
 
   const emailLogin = async (e) => {
     e.preventDefault();
-    if (!auth) return toast.error('Auth service not ready');
+    if (!email || !password) return toast.error('Please enter your email and password');
+
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const idToken = await cred.user.getIdToken();
-      const { data } = await api.post('/auth/firebase', { idToken });
+      if (auth && !initError) {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const idToken = await cred.user.getIdToken();
+        const { data } = await api.post('/auth/firebase', { idToken });
+        finish(data);
+        return;
+      }
+
+      const { data } = await api.post('/auth/login', { email, password });
       finish(data);
     } catch (error) {
       console.error('Email login error:', error);
-      toast.error(error.message || 'Login failed');
+      if (error.response?.status === 401 || error.code === 'auth/user-not-found') {
+        toast.error('No account found for this email. Please create an account first.');
+        redirectToSignup(email);
+        return;
+      }
+      if (error.code === 'auth/wrong-password') {
+        toast.error('Incorrect password. Please try again.');
+        return;
+      }
+      toast.error(error.response?.data?.error || error.message || 'Login failed');
     }
   };
 

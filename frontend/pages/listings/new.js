@@ -84,7 +84,7 @@ export default function NewListing() {
   };
 
   const detectLocation = () => {
-    if (!navigator.geolocation) {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
       return toast.error('Geolocation is not supported by your browser');
     }
 
@@ -138,7 +138,7 @@ export default function NewListing() {
       setForm(f => ({ ...f, images: [...f.images, ...data.urls] }));
       toast.success('Images uploaded');
     } catch (err) {
-      toast.error('Image upload failed');
+      toast.error(err.response?.data?.error || 'Image upload failed');
     } finally {
       setLoading(false);
     }
