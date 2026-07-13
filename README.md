@@ -1,190 +1,104 @@
 <div align="center">
-  <img src="./frontend/public/logo.png" alt="Rently Logo" height="140" style="margin-bottom: 20px;" />
-  <h1>Rently</h1>
-  <p><strong>A modern peer-to-peer rental marketplace built for trust, convenience, and growth</strong></p>
+  <img src="./frontend/public/logo.png" alt="Rently Logo" height="120" style="margin-bottom: 20px;" />
+  
+  <h1>Rently — Peer-to-Peer Rental Marketplace</h1>
+  <p><strong>Empowering the Sharing Economy. Rent anything, anywhere, securely.</strong></p>
+
   <p>
-    <img src="https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
-    <img src="https://img.shields.io/badge/Node.js-20-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
-    <img src="https://img.shields.io/badge/PostgreSQL-16-316192?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-    <img src="https://img.shields.io/badge/Prisma-5-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
-    <img src="https://img.shields.io/badge/Tailwind-3-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
+    <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Frontend-Next.js_15-black?style=for-the-badge&logo=next.js" alt="Next.js" /></a>
+    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Backend-Node.js_20-339933?style=for-the-badge&logo=node.js" alt="Node.js" /></a>
+    <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/Database-PostgreSQL-316192?style=for-the-badge&logo=postgresql" alt="PostgreSQL" /></a>
+    <a href="https://www.prisma.io/"><img src="https://img.shields.io/badge/ORM-Prisma-2D3748?style=for-the-badge&logo=prisma" alt="Prisma" /></a>
+    <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css" alt="Tailwind" /></a>
   </p>
 </div>
 
----
+<br />
 
-## Overview
+## 🚀 About Rently
 
-Rently is a full-stack peer-to-peer rental platform that enables individuals and businesses to list underused items and rent them securely to others. The product is designed to support a sharing economy with a polished user experience, robust authentication, protected booking workflows, and real-time collaboration.
+**Rently** is a modern, high-performance peer-to-peer (P2P) rental marketplace designed to bridge the gap between asset owners and temporary renters. Whether it's heavy machinery, high-end camera gear, or weekend camping equipment, Rently provides a secure, intuitive, and seamless platform to monetize underutilized assets.
 
-From cameras and tools to larger equipment, Rently provides a practical way to monetize assets while helping renters access what they need without purchasing everything outright.
-
-### What the platform does
-- Lets users create, manage, and publish listings
-- Enables renters to discover items, book them, and pay securely
-- Supports real-time communication and booking updates
-- Implements access control for private user and booking resources
-- Provides a modern marketplace experience with responsive UI and rich interactions
+Our mission is to foster a sustainable sharing economy by providing a trusted environment for local rentals, reducing waste, and empowering individuals to earn passive income.
 
 ---
 
-## Core Features
+## 🏗️ System Architecture
 
-### Marketplace experience
-- Browse listings with rich cards, image previews, and location-aware discovery
-- Search and filter items by category, city, price, and rating
-- View detailed listing pages with availability and booking context
+Rently is built on a scalable, modern web architecture optimized for high performance, real-time interactions, and enterprise-grade security.
 
-### Host and renter workflows
-- Create and edit listings with images, pricing, deposits, and availability rules
-- Submit booking requests and manage rental status transitions
-- Track handover verification, timeline events, and dispute handling
+### 💻 Frontend (Client Layer)
+- **Framework**: **Next.js** (Pages Router) for server-side rendering (SSR) and optimized SEO.
+- **Styling & UI**: **Tailwind CSS** for a responsive, utility-first design system.
+- **Maps & Location**: **Google Maps API** for geolocation and interactive map-based asset discovery.
+- **Progressive Web App (PWA)**: Installable on mobile devices for a native app-like experience.
+- **SEO & Discoverability**: Dynamically generated OpenGraph tags, XML sitemaps, and robots.txt.
 
-### Trust and security
-- JWT-based authenticated sessions
-- Protected user-specific and booking-specific routes
-- Signed access tokens for sensitive resource links
-- Clear login and signup handling for registered and unregistered users
+### ⚙️ Backend (API Layer)
+- **Runtime & Framework**: **Node.js** with **Express.js** providing a robust RESTful API.
+- **Database & ORM**: **PostgreSQL** database managed seamlessly through **Prisma ORM** for type-safe queries.
+- **Real-Time Engine**: **Socket.io** powering live chat, instant notifications, and real-time booking updates.
+- **Authentication**: Stateful session management using **JWTs** and Firebase integration.
+- **Payments**: **Razorpay** integration for secure checkout, deposits, and refunds.
+- **Storage**: **Cloudinary** for optimized image storage and delivery.
 
-### Communication and payments
-- Real-time notifications and chat support
-- Payment flow integration with Razorpay
-- Review and reputation signals for safer transactions
-
----
-
-## Tech Stack
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| Frontend | Next.js (Pages Router) | Responsive, production-ready user interface |
-| Styling | Tailwind CSS | Utility-first styling for a polished design system |
-| Backend | Node.js + Express | API layer, middleware, business logic, and route orchestration |
-| Database | PostgreSQL | Persistent transactional data storage |
-| ORM | Prisma | Type-safe database access and schema management |
-| Authentication | JWT + Firebase integration | Secure session handling and modern identity flows |
-| Payments | Razorpay | Checkout and payment verification |
-| Media | Cloudinary | Image upload and media storage |
-| Maps | Google Maps API | Geolocation and map-based experiences |
-| Realtime | Socket.io | Live notifications and chat communication |
+### 🛡️ Security & DevOps
+- **Security Middleware**: **Helmet.js** for HTTP headers, **Express Rate Limit** to prevent DDoS/brute-force attacks, and strict **CORS** configurations.
+- **Logging & Monitoring**: Structured production logging powered by **Winston**.
+- **CI/CD Pipeline**: Automated testing and builds handled by **GitHub Actions**.
 
 ---
 
-## Project Structure
+## ✨ Core Features
 
-```text
-rently/
-├── backend/
-│   ├── prisma/
-│   ├── src/
-│   │   ├── config/
-│   │   ├── middleware/
-│   │   ├── routes/
-│   │   ├── sockets/
-│   │   └── utils/
-├── frontend/
-│   ├── components/
-│   ├── context/
-│   ├── hooks/
-│   ├── lib/
-│   └── pages/
-└── README.md
-```
+1. **Smart Discovery**: Location-aware search, category filtering, and an interactive Map View.
+2. **Secure Bookings**: End-to-end booking workflows with real-time status transitions.
+3. **Instant Communication**: In-app real-time messaging between owners and renters.
+4. **Trust & Verification**: Review systems, user reputation scores, and deposit handling.
+5. **Admin Dashboard**: Comprehensive analytics, dispute resolution, and platform management tools.
+6. **Legal & Compliance**: Built-in Terms of Service, Privacy Policies, Refund Policies, and GDPR Cookie Consent.
 
 ---
 
-## Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
-- Node.js 20+
-- PostgreSQL 14+
-- npm or pnpm
-- Optional: Firebase, Razorpay, Cloudinary, and Google Maps API credentials
+- **Node.js**: v20+
+- **PostgreSQL**: v14+
+- API Keys for Google Maps, Razorpay, Cloudinary, and Firebase.
 
-### Backend setup
+### 1. Backend Setup
 
 ```bash
 cd backend
 npm install
 npx prisma generate
-npx prisma migrate dev --name init
+npx prisma db push # Sync schema
 npm run dev
 ```
+*The backend API will start on `http://localhost:5050`.*
 
-The API server will run on the configured backend port, typically 5050.
-
-### Frontend setup
+### 2. Frontend Setup
 
 ```bash
 cd frontend
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
-
-The frontend will be available at http://localhost:3000.
-
----
-
-## Environment Variables
-
-### Backend
-
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/rently
-JWT_SECRET=your-secure-secret
-PORT=5050
-CLIENT_URL=http://localhost:3000
-
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=
-```
-
-### Frontend
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5050/api
-NEXT_PUBLIC_SOCKET_URL=http://localhost:5050
-
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
-NEXT_PUBLIC_RAZORPAY_KEY_ID=
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
-NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
-```
+*The frontend application will be available at `http://localhost:3000`.*
 
 ---
 
-## Development Notes
-
-- The application follows a modular full-stack architecture with clear separation between the API and UI layers.
-- The backend handles authentication, booking logic, payments, notifications, and access protection.
-- The frontend focuses on a user-friendly experience with modern marketplace interactions and responsive design.
-- Security-conscious routing and signed resource access tokens are used for sensitive authenticated resources.
-
----
-
-## Deployment
-
-- Deploy the backend to a Node.js-compatible host such as Render, Railway, or Fly.io.
-- Deploy the frontend to Vercel or a similar platform.
-- Configure production environment variables for PostgreSQL, auth, payments, storage, and mapping services.
-- Ensure your Razorpay webhook points to the backend payment endpoint.
+## 📈 Roadmap
+- [x] Launch Minimum Viable Product (MVP)
+- [x] Integrate Real-Time Chat & Notifications
+- [x] Implement Startup Launch Requirements (PWA, SEO, Winston, Legal Pages)
+- [ ] AI-Powered Listing Suggestions
+- [ ] Advanced Identity Verification (KYC)
+- [ ] Multi-currency Support
 
 ---
 
 <div align="center">
-  <p><strong>Built to make renting simpler, safer, and more accessible.</strong></p>
+  <p><strong>Built with ❤️ by the Rently Team.</strong></p>
 </div>
