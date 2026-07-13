@@ -1,14 +1,15 @@
 require('dotenv').config(); // Reload env config
+const logger = require('./utils/logger');
 
 // Automatically sync database schema on startup in production/Render environments
 if (process.env.DATABASE_URL) {
   try {
     const { execSync } = require('child_process');
-    console.log('Production startup: Syncing database schema with prisma db push...');
+    logger.info('Production startup: Syncing database schema with prisma db push...');
     execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-    console.log('Prisma db push completed successfully.');
+    logger.info('Prisma db push completed successfully.');
   } catch (error) {
-    console.error('Error during database schema sync (prisma db push):', error);
+    logger.error('Error during database schema sync (prisma db push):', error);
   }
 }
 
@@ -86,15 +87,15 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
+    // Only allow explicit origins in production to enforce strict security
+    if (!origin && process.env.NODE_ENV !== 'production') return callback(null, true);
 
-    // Check if origin is in allowed list or is a vercel subdomain
-    const isAllowed = allowedOrigins.includes(origin) || origin.endsWith('.vercel.app');
+    const isAllowed = allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'));
 
     if (isAllowed) {
       callback(null, true);
     } else {
+      logger.warn(`Blocked by CORS: ${origin}`);
       callback(new Error(`CORS origin not allowed: ${origin}`));
     }
   },
@@ -123,7 +124,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/disputes', disputeRoutes);
 
 app.use((err, _req, res, _next) => {
-  console.error(err);
+  logger.error('Unhandled Server Error:', err);
   res.status(err.status || 500).json({ error: err.message || 'Server error' });
 });
 
@@ -137,12 +138,12 @@ let portAttempts = 0;
 const maxPortRetries = 10;
 
 const listen = () => {
-  server.listen(currentPort, () => console.log(`API + WS on :${currentPort}`));
+  server.listen(currentPort, () => logger.info(`API + WS on :${currentPort}`));
 };
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE' && portAttempts < maxPortRetries) {
-    console.warn(`Port ${currentPort} is in use, trying ${currentPort + 1}...`);
+    logger.warn(`Port ${currentPort} is in use, trying ${currentPort + 1}...`);
     portAttempts += 1;
     currentPort += 1;
     setTimeout(listen, 100);
@@ -150,13 +151,11 @@ server.on('error', (err) => {
   }
 
   if (err.code === 'EADDRINUSE') {
-    console.error(
-      `Ports ${startPort}-${currentPort} are in use. Please stop the process using one of them or set PORT to a free value.`
-    );
+    logger.error(`Ports ${startPort}-${currentPort} are in use. Please stop the process using one of them or set PORT to a free value.`);
     process.exit(1);
   }
 
-  console.error(err);
+  logger.error('Server error:', err);
   process.exit(1);
 });
 
