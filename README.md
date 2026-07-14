@@ -1,203 +1,396 @@
 <div align="center">
-  <img src="./frontend/public/logo.png" alt="Rently Logo" height="120" style="margin-bottom: 20px;" />
-  
-  <h1>Rently — Peer-to-Peer Rental Marketplace</h1>
-  <p><strong>Empowering the Sharing Economy. Rent anything, anywhere, securely.</strong></p>
 
-  <p>
-    <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Frontend-Next.js_15-black?style=for-the-badge&logo=next.js" alt="Next.js" /></a>
-    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Backend-Node.js_20-339933?style=for-the-badge&logo=node.js" alt="Node.js" /></a>
-    <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/Database-PostgreSQL-316192?style=for-the-badge&logo=postgresql" alt="PostgreSQL" /></a>
-    <a href="https://www.prisma.io/"><img src="https://img.shields.io/badge/ORM-Prisma-2D3748?style=for-the-badge&logo=prisma" alt="Prisma" /></a>
-    <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css" alt="Tailwind" /></a>
-  </p>
+<img src="./frontend/public/logo.png" alt="Rently Logo" height="140" />
+
+<br/>
+
+# Rently — Peer-to-Peer Rental Marketplace
+
+### *Empowering the Sharing Economy. Rent anything, anywhere, securely.*
+
+<br/>
+
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express.js-4-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
+<br/>
+
+[![Socket.io](https://img.shields.io/badge/Socket.io-Real--Time-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
+[![Razorpay](https://img.shields.io/badge/Razorpay-Payments-02042B?style=for-the-badge&logo=razorpay&logoColor=white)](https://razorpay.com/)
+[![Cloudinary](https://img.shields.io/badge/Cloudinary-CDN-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Google Maps](https://img.shields.io/badge/Google_Maps-API-4285F4?style=for-the-badge&logo=google-maps&logoColor=white)](https://developers.google.com/maps)
+
+<br/>
+
+[![CI/CD](https://github.com/lokigamer2911/rently/actions/workflows/ci.yml/badge.svg)](https://github.com/lokigamer2911/rently/actions)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg?style=flat-square)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/lokigamer2911/rently/pulls)
+
+<br/>
+
+<a href="#-vision--overview">Overview</a> •
+<a href="#️-system-architecture">Architecture</a> •
+<a href="#-tech-stack">Tech Stack</a> •
+<a href="#-feature-matrix">Features</a> •
+<a href="#-local-development-setup">Setup</a> •
+<a href="#-testing">Testing</a> •
+<a href="#-directory-structure">Structure</a>
+
 </div>
 
-<br />
+---
 
 ## 🚀 Vision & Overview
 
-**Rently** is a high-performance, full-stack peer-to-peer (P2P) rental marketplace. Built for scale, it enables individuals and businesses to list underutilized assets—from professional camera gear to heavy machinery—and safely rent them to locals in their community. 
+**Rently** is a production-grade, full-stack **peer-to-peer (P2P) rental marketplace** built for the modern sharing economy. It enables individuals and businesses to monetize underutilized assets — from camera gear and electronics to vehicles and heavy machinery — by safely renting them to their community.
 
-By prioritizing trust, real-time communication, and a frictionless booking experience, Rently serves as the technological foundation for a sustainable, community-driven sharing economy.
+The platform is engineered for trust, speed, and scale, combining:
+- 🔐 **Secure identity & payments** via JWT authentication and Razorpay
+- 💬 **Real-time communication** via Socket.io for live chat and notifications
+- 🗺️ **Location-based discovery** powered by Google Maps API
+- 📱 **PWA support** for native app-like experience on iOS & Android
+- 🛡️ **Enterprise-grade security** via Helmet, CORS, and rate limiting
 
 ---
 
-## 🏗️ Comprehensive Architecture
+## 🏗️ System Architecture
 
-Rently utilizes a modern decoupled architecture, separating the client-side presentation layer from the robust REST API and WebSocket servers.
+Rently uses a **decoupled monorepo architecture** — a Next.js PWA on the client communicating with a Node.js/Express REST API and Socket.io real-time server on the backend.
 
-```mermaid
-graph TD;
-    Client[Next.js PWA Client] <-->|REST API / HTTPS| LoadBalancer(API Gateway / Load Balancer);
-    Client <-->|WebSockets| WSServer[Socket.io Real-Time Server];
-    
-    LoadBalancer --> NodeAPI[Node.js / Express API];
-    NodeAPI --> Auth[JWT Authentication];
-    NodeAPI --> Controllers[Business Logic];
-    Controllers --> Prisma[Prisma ORM];
-    
-    Prisma <--> PostgreSQL[(PostgreSQL Database)];
-    
-    NodeAPI <--> External1(Razorpay Payment Gateway);
-    NodeAPI <--> External2(Cloudinary CDN);
-    Client <--> External3(Google Maps API);
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT LAYER                             │
+│  Next.js 15 PWA  │  Tailwind CSS  │  SWR  │  React Context     │
+│  Google Maps     │  Socket.io-client       │  Three.js          │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ HTTPS REST + WebSockets
+┌──────────────────────────▼──────────────────────────────────────┐
+│                        API LAYER                                │
+│  Node.js 20 + Express.js     │  Socket.io Server               │
+│  JWT Auth + Middleware        │  Winston Logger                 │
+│  Helmet + Rate Limiting       │  Zod Validation                 │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+          ┌────────────────┼──────────────────────┐
+          │                │                      │
+┌─────────▼──────┐  ┌──────▼────────┐  ┌─────────▼──────────┐
+│  PostgreSQL 14 │  │  Razorpay     │  │  Cloudinary CDN    │
+│  via Prisma ORM│  │  Payments     │  │  Image Uploads     │
+└────────────────┘  └───────────────┘  └────────────────────┘
 ```
 
-### 💻 Frontend (Client Layer)
-- **Framework**: **Next.js 15 (Pages Router)** delivering fast Server-Side Rendered (SSR) pages and optimized static assets.
-- **Styling**: **Tailwind CSS** implementing a bespoke, responsive design system.
-- **State Management & Fetching**: **SWR** for highly reactive, cache-first data fetching and **React Context API** for global state (Auth, Cart).
-- **Progressive Web App (PWA)**: Fully configured `manifest.json` and service workers allow users to install the app on iOS/Android natively.
-- **Maps & Discovery**: Deep integration with **Google Maps API** and `@react-google-maps/api` for location-based asset discovery and clustering.
-- **SEO Optimization**: Next-SEO configurations, dynamically generated OpenGraph metadata, and automated XML sitemaps.
+---
 
-### ⚙️ Backend (API Layer)
-- **Runtime**: **Node.js 20** running **Express.js**.
-- **Database**: **PostgreSQL 14+** managed efficiently via **Prisma ORM**, ensuring type-safe queries and seamless schema migrations.
-- **Real-Time Engine**: **Socket.io** enables live chat between users and instant push notifications for booking state changes.
-- **Authentication**: Custom stateful session management using **JSON Web Tokens (JWTs)**.
-- **Payments**: End-to-end integration with **Razorpay** covering checkout sessions, security deposits, and automated refunds.
-- **Storage**: **Cloudinary** for image uploads, on-the-fly transformations, and CDN delivery.
+## 🛠️ Tech Stack
 
-### 🛡️ Security, DevOps, & Compliance
-- **Application Security**: **Helmet.js** for secure HTTP headers, **Express Rate Limit** to prevent brute-force and DDoS attacks, and explicit **CORS** whitelisting.
-- **Logging & Monitoring**: Enterprise-grade structured logging implemented via **Winston**.
-- **CI/CD**: Fully automated **GitHub Actions** workflows that install dependencies and build the application on every push to `main`.
-- **Legal Compliance**: Pre-configured dynamic pages for Terms of Service, Privacy Policy, Refund Policy, and GDPR-compliant Cookie Consent logic.
+### Frontend
+| Technology | Version | Purpose |
+|---|---|---|
+| **Next.js** | 15 | SSR/SSG framework with Pages Router |
+| **React** | 19 | UI component library |
+| **Tailwind CSS** | 3 | Utility-first responsive styling |
+| **SWR** | 2 | Cache-first data fetching & revalidation |
+| **Socket.io Client** | 4 | Real-time bidirectional communication |
+| **Google Maps API** | Latest | Location-based listing discovery |
+| **React Leaflet** | 4 | Interactive map rendering |
+| **Three.js + R3F** | Latest | 3D product visualizations |
+| **Recharts** | 3 | Dashboard analytics & charts |
+| **next-pwa** | 5 | Progressive Web App (service workers) |
+| **next-sitemap** | 4 | Automated XML sitemaps for SEO |
+| **Firebase SDK** | 10 | Client-side authentication integration |
+| **Axios** | 1 | HTTP client for API requests |
+| **React Hot Toast** | 2 | In-app notification toasts |
+| **jsPDF** | 4 | Client-side PDF generation (receipts) |
+
+### Backend
+| Technology | Version | Purpose |
+|---|---|---|
+| **Node.js** | 20 | JavaScript runtime |
+| **Express.js** | 4 | HTTP server & routing framework |
+| **Prisma ORM** | 5 | Type-safe database access & migrations |
+| **PostgreSQL** | 14+ | Primary relational database |
+| **Socket.io** | 4 | Real-time WebSocket server |
+| **JSON Web Token** | 9 | Stateless authentication |
+| **bcryptjs** | 2 | Password hashing |
+| **Zod** | 3 | Runtime request validation schemas |
+| **Razorpay SDK** | 2 | Payment order creation & webhook handling |
+| **Cloudinary SDK** | 2 | Image upload, transform & CDN delivery |
+| **@sendgrid/mail** | 8 | Transactional email delivery |
+| **Twilio** | 6 | SMS/OTP notifications |
+| **Firebase Admin** | 12 | Server-side Firebase authentication |
+| **Helmet.js** | 8 | Secure HTTP response headers |
+| **express-rate-limit** | 8 | Brute-force & DDoS protection |
+| **Winston** | 3 | Structured production logging |
+| **Multer** | 1 | Multipart file upload handling |
+| **cookie-parser** | 1 | HTTP cookie management |
+| **dotenv** | 16 | Environment variable management |
+
+### DevOps & Tooling
+| Technology | Purpose |
+|---|---|
+| **GitHub Actions** | CI/CD pipeline (lint, build, test) |
+| **Jest** | Unit & integration test runner |
+| **Supertest** | HTTP assertion testing for Express |
+| **Nodemon** | Hot-reload development server |
+| **Vercel** | Frontend deployment & edge network |
 
 ---
 
-## ✨ Detailed Feature Matrix
+## ✨ Feature Matrix
 
 ### 👤 For Renters
-- **Smart Search Engine**: Filter assets by category, city, price range, and minimum rating.
-- **Interactive Map Discovery**: Browse listings visually across a city using clustered map markers.
-- **Seamless Booking Flow**: Select dates, calculate costs (rental fee + deposit), and pay securely via Razorpay.
-- **Live Order Tracking**: Track item handover, active rental periods, and return completions.
+- **🔍 Smart Search Engine** — Filter by category, city, price range, and minimum rating
+- **🗺️ Interactive Map Discovery** — Browse listings visually on a city map with clustered markers
+- **📅 Seamless Booking Flow** — Select dates, view cost breakdowns (fee + deposit), and pay via Razorpay
+- **💳 Secure Checkout** — Razorpay-powered payment with HMAC signature verification
+- **📦 Live Order Tracking** — Track handover, active rental, and return states in real time
+- **⭐ Reviews & Ratings** — Leave and receive two-way feedback after each completed booking
+- **📄 PDF Receipts** — Download rental agreements and payment receipts as PDFs
+- **📱 PWA Support** — Install Rently as a native app on iOS and Android
 
-### 🏢 For Asset Owners
-- **Listing Management**: Create rich listings with multiple photos, custom dynamic pricing, and categorical tagging.
-- **Booking Dashboard**: Approve/Reject incoming booking requests and manage inventory availability.
-- **Earnings & Analytics**: View historical earnings, track pending payouts, and evaluate asset ROI.
+### 🏢 For Asset Owners (Lenders)
+- **📸 Rich Listing Creation** — Multi-photo uploads, detailed descriptions, dynamic pricing
+- **🏷️ Category & Tag Management** — Organize assets for maximum discoverability
+- **✅ Booking Management Dashboard** — Approve or reject incoming booking requests
+- **📊 Earnings Analytics** — View historical earnings, pending payouts, and ROI per asset
+- **🔒 Security Deposit Management** — Automatic deposit capture and release workflows
+- **🔔 Real-Time Notifications** — Instant alerts for new bookings, messages, and status changes
 
 ### 🛠️ Platform & Admin
-- **Live Chat**: Instant messaging system connecting renters and owners to coordinate handovers.
-- **Review & Reputation System**: Two-way feedback loop establishing user trust scores.
-- **Dispute Resolution**: Dedicated endpoints for admins to arbitrate conflicts over security deposits.
+- **💬 Live Chat** — Socket.io powered real-time messaging between renters and owners
+- **⚖️ Dispute Resolution** — Admin endpoints to arbitrate security deposit conflicts
+- **🔐 KYC Gating** — User verification status gates sensitive booking actions
+- **📧 Email Notifications** — Transactional emails via SendGrid for bookings and alerts
+- **📱 SMS/OTP** — Twilio-powered OTP verification for phone numbers
+- **🌐 SEO Optimized** — OpenGraph metadata, dynamic sitemaps, canonical URLs
+- **📋 Legal Framework** — Dynamic pages for Terms, Privacy Policy, Refund Policy, and Cookie Consent
 
 ---
 
-## 🛠️ Local Development Guide
+## 🛡️ Security Highlights
 
-Follow these instructions to set up the Rently ecosystem on your local machine.
+| Layer | Mechanism |
+|---|---|
+| **Authentication** | JWT-based stateless sessions with `bcryptjs` password hashing |
+| **HTTP Headers** | `Helmet.js` sets `Content-Security-Policy`, `X-Frame-Options`, HSTS, etc. |
+| **Rate Limiting** | `express-rate-limit` prevents brute-force and DDoS attacks |
+| **CORS** | Explicit whitelist of allowed client origins |
+| **Payment Webhooks** | HMAC-SHA256 signature verification on every Razorpay webhook |
+| **Input Validation** | `Zod` schema validation on all API request bodies |
+| **File Uploads** | `Multer` with type and size constraints |
+| **Secrets** | All credentials stored in `.env` files, never committed to git |
+
+---
+
+## 🧪 Testing
+
+The backend includes integration tests powered by **Jest** and **Supertest**.
+
+```bash
+cd backend
+npm test
+```
+
+### Test Coverage
+| Suite | What it tests |
+|---|---|
+| `booking.test.js` | Booking state transitions (create → confirm → cancel) |
+| `payment.test.js` | Razorpay webhook HMAC signature verification + idempotency |
+
+Tests run against an **isolated SQLite database** (`backend/.env.test`) so they never touch development or production data.
+
+The CI/CD pipeline (GitHub Actions) runs all tests automatically on every push to `main`.
+
+---
+
+## 🚀 Local Development Setup
 
 ### Prerequisites
-- **Node.js** (v20 or higher)
-- **PostgreSQL** (v14 or higher) running locally or via Docker
-- API Credentials for: **Google Maps**, **Razorpay**, **Cloudinary**, and **Firebase** (optional).
-
-### 1. Database & Backend Setup
-
-1. **Clone the repository and enter the backend directory:**
-   ```bash
-   git clone https://github.com/lokigamer2911/rently.git
-   cd rently/backend
-   ```
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-3. **Configure Environment Variables:**
-   Create a `.env` file in the `backend/` directory:
-   ```env
-   DATABASE_URL=postgresql://postgres:password@localhost:5432/rently
-   JWT_SECRET=your_super_secret_jwt_key
-   PORT=5050
-   CLIENT_URL=http://localhost:3000
-   
-   # External Services
-   CLOUDINARY_CLOUD_NAME=your_cloud_name
-   CLOUDINARY_API_KEY=your_api_key
-   CLOUDINARY_API_SECRET=your_api_secret
-   
-   RAZORPAY_KEY_ID=your_razorpay_key
-   RAZORPAY_KEY_SECRET=your_razorpay_secret
-   ```
-4. **Initialize Database:**
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   ```
-5. **Start the API Server:**
-   ```bash
-   npm run dev
-   ```
-   *The server will start on `http://localhost:5050` and the Winston logger will initialize.*
-
-### 2. Frontend Setup
-
-1. **Enter the frontend directory:**
-   ```bash
-   cd ../frontend
-   ```
-2. **Install dependencies (using legacy peer deps for React 19 compatibility):**
-   ```bash
-   npm install --legacy-peer-deps
-   ```
-3. **Configure Environment Variables:**
-   Create a `.env.local` file in the `frontend/` directory:
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:5050/api
-   NEXT_PUBLIC_SOCKET_URL=http://localhost:5050
-   
-   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-   ```
-4. **Start the Development Server:**
-   ```bash
-   npm run dev
-   ```
-   *The client will be accessible at `http://localhost:3000`.*
+- **Node.js** v20+
+- **PostgreSQL** v14+ (local or via Docker)
+- API keys for: **Razorpay**, **Cloudinary**, **Google Maps**, **Firebase**, **SendGrid**, **Twilio** *(optional for local dev)*
 
 ---
 
-## 📂 Core Directory Structure
+### 1. Clone the Repository
 
-```text
-rently-main/
-├── .github/workflows/       # CI/CD Automation pipelines
-├── backend/
-│   ├── prisma/              # Database schema models (schema.prisma)
-│   ├── src/
-│   │   ├── config/          # 3rd party integrations (Cloudinary, Razorpay)
-│   │   ├── controllers/     # API Business Logic
-│   │   ├── routes/          # Express route definitions
-│   │   ├── sockets/         # Socket.io event listeners
-│   │   └── utils/           # Winston logger, JWT helpers, Middleware
-│   └── package.json
-└── frontend/
-    ├── components/          # Reusable React components (UI, Modals, Maps)
-    ├── context/             # React Context Providers (Auth, Cart)
-    ├── pages/               # Next.js Page Routes (Listings, Dashboard, Checkout)
-    ├── public/              # Static assets, PWA manifest, and favicons
-    ├── styles/              # Global Tailwind CSS and custom stylesheets
-    ├── next.config.js       # Next.js rules, PWA, and security headers
-    └── next-sitemap.config.js # Automated XML sitemap generator
+```bash
+git clone https://github.com/lokigamer2911/rently.git
+cd rently
 ```
 
 ---
 
-## 📈 Roadmap & Future Upgrades
+### 2. Backend Setup
 
-- [x] **V1.0:** Core Marketplace Loop, Payments, Google Maps, and JWT Auth.
-- [x] **V1.1:** Real-time Chat, Notification Engine, and Security Hardening.
-- [x] **V1.2:** Startup Optimization (PWA Installability, Automated SEO Sitemaps, Legal Framework, CI/CD).
-- [ ] **V1.3:** AI-Powered Listing Generators (Auto-fill descriptions based on image uploads).
-- [ ] **V2.0:** Multi-currency / Global Market support.
-- [ ] **V2.1:** KYC / Identity Verification Integration (e.g., Onfido or Stripe Identity).
+```bash
+cd backend
+npm install
+```
+
+Create `backend/.env`:
+
+```env
+# Server
+PORT=5050
+NODE_ENV=development
+CLIENT_URL=http://localhost:3000
+
+# Database
+DATABASE_URL=postgresql://postgres:password@localhost:5432/rently
+
+# Authentication
+JWT_SECRET=your_super_secret_jwt_key
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Razorpay
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
+
+# SendGrid
+SENDGRID_API_KEY=your_sendgrid_api_key
+SENDGRID_FROM_EMAIL=no-reply@yourdomain.com
+
+# Twilio (optional)
+TWILIO_ACCOUNT_SID=your_twilio_sid
+TWILIO_AUTH_TOKEN=your_twilio_token
+TWILIO_PHONE_NUMBER=+1234567890
+
+# Firebase Admin (optional)
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_service_account_email
+FIREBASE_PRIVATE_KEY="your_private_key"
+```
+
+Initialize the database and start the server:
+
+```bash
+npx prisma generate
+npx prisma db push      # or: npx prisma migrate dev
+npm run dev             # starts on http://localhost:5050
+```
+
+---
+
+### 3. Frontend Setup
+
+```bash
+cd frontend
+npm install --legacy-peer-deps
+```
+
+Create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5050/api
+NEXT_PUBLIC_SOCKET_URL=http://localhost:5050
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key_id
+```
+
+Start the development server:
+
+```bash
+npm run dev             # starts on http://localhost:3000
+```
+
+---
+
+## 📂 Directory Structure
+
+```
+rently/
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # GitHub Actions CI/CD pipeline
+│
+├── backend/
+│   ├── prisma/
+│   │   └── schema.prisma       # Database schema & relations
+│   ├── src/
+│   │   ├── app.js              # Express app config & route registration
+│   │   ├── index.js            # HTTP server entry point (imports app.js)
+│   │   ├── config/
+│   │   │   ├── prisma.js       # Prisma client singleton
+│   │   │   ├── razorpay.js     # Razorpay instance (mock-safe)
+│   │   │   └── cloudinary.js   # Cloudinary SDK config
+│   │   ├── middleware/
+│   │   │   └── auth.js         # JWT requireAuth middleware
+│   │   ├── routes/
+│   │   │   ├── auth.routes.js
+│   │   │   ├── listing.routes.js
+│   │   │   ├── booking.routes.js
+│   │   │   ├── payment.routes.js
+│   │   │   ├── chat.routes.js
+│   │   │   └── user.routes.js
+│   │   ├── sockets/
+│   │   │   └── chat.socket.js  # Socket.io event handlers
+│   │   └── utils/
+│   │       └── logger.js       # Winston structured logger
+│   ├── tests/
+│   │   ├── booking.test.js     # Booking state machine tests
+│   │   └── payment.test.js     # Webhook HMAC + idempotency tests
+│   ├── .env.test               # Isolated test environment config
+│   └── package.json
+│
+└── frontend/
+    ├── components/             # Reusable React UI components
+    ├── context/                # React Context (Auth, Cart, Socket)
+    ├── hooks/                  # Custom React hooks
+    ├── lib/                    # Utility functions & API helpers
+    ├── pages/                  # Next.js pages & API routes
+    ├── public/                 # Static assets, PWA manifest, icons
+    ├── styles/                 # Global CSS & Tailwind config
+    ├── next.config.js          # Next.js, PWA & security headers config
+    ├── next-sitemap.config.js  # Automated XML sitemap generator
+    ├── tailwind.config.js      # Tailwind design tokens
+    ├── .npmrc                  # npm config (legacy-peer-deps)
+    └── package.json
+```
+
+---
+
+## 🔄 CI/CD Pipeline
+
+Every push to `main` triggers the **GitHub Actions** workflow:
+
+```
+Push to main
+    │
+    ├── Install frontend dependencies
+    ├── Build Next.js app (checks for compile errors)
+    ├── Install backend dependencies
+    └── Run Jest test suite (booking + payment webhook tests)
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+1. Fork the repository
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
 ---
 
 <div align="center">
-  <p><strong>Rently is built with ❤️ to make renting simpler, safer, and highly scalable.</strong></p>
+
+**Built with ❤️ to make renting simpler, safer, and highly scalable.**
+
+[![GitHub](https://img.shields.io/badge/GitHub-lokigamer2911%2Frently-181717?style=for-the-badge&logo=github)](https://github.com/lokigamer2911/rently)
+
 </div>
