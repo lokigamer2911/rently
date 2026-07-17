@@ -10,9 +10,9 @@ export function AuthProvider({ children }) {
   const startupRetryDone = useRef(false);
   const startupRetryTimer = useRef(null);
 
-  const fetchUser = async ({ retryOn401 = false } = {}) => {
+  const fetchUser = async ({ retryOn401 = false, useFallbackToken = false } = {}) => {
     try {
-      const { data } = await api.get('/users/me');
+      const { data } = await api.get('/users/me', useFallbackToken ? { __useAuthFallback: true } : undefined);
       setUser(data);
     } catch (err) {
       if (err.response?.status === 401) {
@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
         if (retryOn401 && hasFallbackToken && !startupRetryDone.current) {
           startupRetryDone.current = true;
           startupRetryTimer.current = window.setTimeout(() => {
-            fetchUser({ retryOn401: false });
+            fetchUser({ retryOn401: false, useFallbackToken: true });
           }, 500);
           return;
         }
@@ -43,7 +43,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (data) => {
-    // Keep a bearer fallback for browsers that block or delay the cookie.
+    // Keep a temporary in-memory bearer fallback only for explicit retry flows
+    // after cookie auth fails. This is not persisted to localStorage.
     setStoredAuthToken(data.token);
     setUser(data.user);
   };

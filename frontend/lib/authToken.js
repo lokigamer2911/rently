@@ -1,16 +1,13 @@
-const TOKEN_KEY = 'rently_auth_token';
+// The JWT fallback is intentionally stored in memory only.
+// This avoids localStorage persistence and keeps the token available
+// only for the current page session when cookie auth needs a retry.
+let inMemoryAuthToken = null;
 
 export function getStoredAuthToken() {
-  if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  return inMemoryAuthToken;
 }
 
 export function setStoredAuthToken(token) {
-  if (typeof window === 'undefined') return;
-  if (token) {
-    window.localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    window.localStorage.removeItem(TOKEN_KEY);
-  }
+  inMemoryAuthToken = token || null;
 }
 

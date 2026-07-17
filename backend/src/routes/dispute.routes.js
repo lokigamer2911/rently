@@ -1,6 +1,24 @@
 const express = require('express');
+const { z, ZodError } = require('zod');
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
+
+const VALID_RESOLUTION_ACTIONS = ['CANCELLED', 'COMPLETED'];
+
+const resolveDisputeSchema = z.object({
+  resolutionAction: z.enum(VALID_RESOLUTION_ACTIONS).optional(),
+});
+
+const createDisputeSchema = z.object({
+  reason: z.string().min(5, 'Reason must be at least 5 characters long'),
+});
+
+const routeErrorHandler = (error, res) => {
+  if (error instanceof ZodError) {
+    return res.status(400).json({ error: error.errors });
+  }
+  return res.status(500).json({ error: 'Failed to process request' });
+};
 
 const router = express.Router();
 
@@ -8,7 +26,7 @@ const router = express.Router();
 router.post('/:bookingId', requireAuth, async (req, res) => {
   try {
     const { bookingId } = req.params;
-    const { reason } = req.body;
+    const { reason } = createDisputeSchema.parse(req.body);
 
     // Verify booking exists and user is part of it
     const booking = await prisma.booking.findUnique({
@@ -42,7 +60,7 @@ router.post('/:bookingId', requireAuth, async (req, res) => {
     res.json(dispute);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to report issue' });
+    return routeErrorHandler(error, res);
   }
 });
 
@@ -67,7 +85,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     res.json(disputes);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch disputes' });
+    return routeErrorHandler(error, res);
   }
 });
 
@@ -79,7 +97,7 @@ router.post('/:id/resolve', requireAuth, async (req, res) => {
     }
 
     const { id } = req.params;
-    const { resolutionAction } = req.body; // e.g., 'CANCELLED', 'COMPLETED'
+    const { resolutionAction } = resolveDisputeSchema.parse(req.body);
 
     const dispute = await prisma.dispute.update({
       where: { id },
@@ -96,7 +114,7 @@ router.post('/:id/resolve', requireAuth, async (req, res) => {
 
     res.json({ message: 'Dispute resolved successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to resolve dispute' });
+    return routeErrorHandler(error, res);
   }
 });
 

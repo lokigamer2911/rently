@@ -2,8 +2,8 @@
 require('dotenv').config(); // Reload env config
 const logger = require('./utils/logger');
 
-// Automatically sync database schema on startup in production/Render environments
-if (process.env.DATABASE_URL) {
+// Automatically sync database schema on startup in production environments only
+if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
   try {
     const { execSync } = require('child_process');
     logger.info('Production startup: Syncing database schema with prisma db push...');
@@ -99,7 +99,15 @@ app.use(
 );
 
 // Razorpay webhook needs raw body — mount before json parser
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+app.use(
+  '/api/payments/webhook',
+  express.raw({
+    type: 'application/json',
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 

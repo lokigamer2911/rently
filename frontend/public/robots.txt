@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://rently-demo.com
+
+# Sitemaps
+Sitemap: https://rently-demo.com/sitemap.xml

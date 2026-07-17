@@ -20,7 +20,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((cfg) => {
-  const token = getStoredAuthToken();
+  const token = cfg?.__useAuthFallback ? getStoredAuthToken() : null;
   if (token) {
     cfg.headers = cfg.headers || {};
     if (!cfg.headers.Authorization) {

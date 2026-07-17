@@ -20,6 +20,12 @@ function registerSocket(io) {
     socket.on('message:send', async (data, callback) => {
       try {
         const { threadId, content } = data;
+        const thread = await prisma.thread.findUnique({ where: { id: threadId } });
+
+        if (thread.userAId !== socket.user.id && thread.userBId !== socket.user.id) {
+          return callback?.({ ok: false, error: 'Forbidden' });
+        }
+
         const message = await prisma.message.create({
           data: {
             threadId,
@@ -29,7 +35,6 @@ function registerSocket(io) {
           include: { sender: { select: { id: true, name: true, avatarUrl: true } } }
         });
 
-        const thread = await prisma.thread.findUnique({ where: { id: threadId } });
         const targetId = thread.userAId === socket.user.id ? thread.userBId : thread.userAId;
 
         io.to(`user:${targetId}`).emit('message:recv', message);

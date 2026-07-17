@@ -2,6 +2,7 @@
 const { app, registerSocket, allowedOrigins } = require('./app');
 const http = require('http');
 const { Server } = require('socket.io');
+const { cleanupStalePendingBookings } = require('./utils/bookingCleanup');
 
 // Create HTTP server from Express app
 const server = http.createServer(app);
@@ -13,6 +14,7 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+app.set('io', io);
 registerSocket(io);
 
 // Port handling with retry on EADDRINUSE
@@ -41,4 +43,20 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
-listen();
+const scheduleCleanup = () => {
+  const prisma = require('./config/prisma');
+  setInterval(async () => {
+    try {
+      await cleanupStalePendingBookings({ prisma });
+    } catch (error) {
+      console.error('Stale pending booking cleanup failed:', error);
+    }
+  }, 5 * 60 * 1000);
+};
+
+if (require.main === module) {
+  listen();
+  scheduleCleanup();
+}
+
+module.exports = app;
