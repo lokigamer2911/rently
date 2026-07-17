@@ -240,26 +240,113 @@ npm test
 
 ```text
 rently/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── backend/
 │   ├── prisma/
+│   │   ├── schema.prisma
+│   │   └── seed.js
 │   ├── src/
 │   │   ├── app.js
 │   │   ├── index.js
 │   │   ├── config/
+│   │   │   ├── cloudinary.js
+│   │   │   ├── firebase.js
+│   │   │   ├── prisma.js
+│   │   │   └── razorpay.js
 │   │   ├── middleware/
+│   │   │   └── auth.js
 │   │   ├── routes/
+│   │   │   ├── admin.routes.js
+│   │   │   ├── auth.routes.js
+│   │   │   ├── booking.routes.js
+│   │   │   ├── category.routes.js
+│   │   │   ├── chat.routes.js
+│   │   │   ├── dispute.routes.js
+│   │   │   ├── listing.routes.js
+│   │   │   ├── notification.routes.js
+│   │   │   ├── payment.routes.js
+│   │   │   ├── review.routes.js
+│   │   │   ├── upload.routes.js
+│   │   │   └── user.routes.js
 │   │   ├── sockets/
+│   │   │   └── index.js
 │   │   └── utils/
-│   └── tests/
+│   │       ├── access.js
+│   │       ├── bookingCleanup.js
+│   │       ├── cookie.js
+│   │       ├── jwt.js
+│   │       ├── logger.js
+│   │       ├── messaging.js
+│   │       └── notifications.js
+│   ├── tests/
+│   │   ├── booking.test.js
+│   │   ├── bookingCleanup.test.js
+│   │   ├── dispute.test.js
+│   │   ├── payment.test.js
+│   │   └── socketAuth.test.js
+│   ├── package.json
+│   └── .env.test
 ├── frontend/
 │   ├── components/
+│   │   ├── Button.js
+│   │   ├── ConditionTimeline.js
+│   │   ├── CookieConsent.js
+│   │   ├── HandoverModal.js
+│   │   ├── Layout.js
+│   │   ├── ListingCard.js
+│   │   ├── MapContent.js
+│   │   ├── MapView.js
+│   │   ├── Navbar.js
+│   │   ├── ReviewModal.js
+│   │   ├── SignaturePad.js
+│   │   ├── TermsModal.js
+│   │   ├── TiltCard.js
+│   │   └── three/
 │   ├── context/
+│   │   ├── AuthContext.js
+│   │   └── CartContext.js
 │   ├── hooks/
+│   │   └── useAuth.js
 │   ├── lib/
+│   │   ├── api.js
+│   │   ├── authToken.js
+│   │   ├── firebase.js
+│   │   ├── pdf.js
+│   │   └── socket.js
 │   ├── pages/
+│   │   ├── _app.js
+│   │   ├── cart.js
+│   │   ├── dashboard.js
+│   │   ├── earnings.js
+│   │   ├── help.js
+│   │   ├── index.js
+│   │   ├── landing.js
+│   │   ├── notifications.js
+│   │   ├── privacy.js
+│   │   ├── profile.js
+│   │   ├── refund-policy.js
+│   │   ├── terms.js
+│   │   ├── admin/
+│   │   ├── auth/
+│   │   ├── bookings/
+│   │   ├── chat/
+│   │   └── listings/
 │   ├── public/
-│   └── styles/
-└── README.md
+│   │   ├── logo.png
+│   │   ├── manifest.json
+│   │   └── robots.txt
+│   ├── styles/
+│   │   ├── button.css
+│   │   └── globals.css
+│   ├── package.json
+│   ├── next.config.js
+│   ├── next-sitemap.config.js
+│   ├── postcss.config.js
+│   └── tailwind.config.js
+├── README.md
+└── project_structure.txt
 ```
 
 ---
