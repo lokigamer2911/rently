@@ -2,13 +2,10 @@
 
 <img src="./frontend/public/logo.png" alt="Rently Logo" height="140" />
 
-<br/>
+# Rently
+### Peer-to-Peer Rental Marketplace for the Modern Sharing Economy
 
-# Rently — Peer-to-Peer Rental Marketplace
-
-### Empowering the sharing economy with a secure, modern, and scalable rental platform.
-
-<br/>
+A polished, secure, and scalable platform for listing, booking, paying for, and managing rentals in real time.
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -17,15 +14,10 @@
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-<br/>
-
 [![Socket.io](https://img.shields.io/badge/Socket.io-Real--Time-010101?style=for-the-badge&logo=socket.io&logoColor=white)](https://socket.io/)
 [![Razorpay](https://img.shields.io/badge/Razorpay-Payments-02042B?style=for-the-badge&logo=razorpay&logoColor=white)](https://razorpay.com/)
 [![Cloudinary](https://img.shields.io/badge/Cloudinary-CDN-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
 [![Firebase](https://img.shields.io/badge/Firebase-Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Google Maps](https://img.shields.io/badge/Google_Maps-API-4285F4?style=for-the-badge&logo=google-maps&logoColor=white)](https://developers.google.com/maps)
-
-<br/>
 
 [![CI/CD](https://github.com/lokigamer2911/rently/actions/workflows/ci.yml/badge.svg)](https://github.com/lokigamer2911/rently/actions)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg?style=flat-square)](./LICENSE)
@@ -37,35 +29,49 @@
 
 ## Overview
 
-Rently is a full-stack peer-to-peer rental marketplace designed to make renting assets simple, trustworthy, and efficient. From everyday items to high-value equipment, the platform allows owners to list items and renters to book them securely with built-in payments, messaging, and review flows.
+Rently is a full-stack rental marketplace that helps people rent and lend assets safely and efficiently. Whether it is consumer electronics, tools, vehicles, or specialized equipment, the platform supports the entire rental lifecycle from listing and booking to secure payment and post-rental review.
 
-The current version is focused on reliability and production-readiness, with improved auth handling, secure payment processing, real-time communication, and stronger backend safeguards.
+This release focuses on reliability and product maturity, including stronger backend stability, secure payment processing, live communication, and improved test coverage.
 
-### What’s new in this release
+### Highlights
 
-- Stable backend startup with the cleanup scheduler initialized correctly
-- Secure Razorpay webhook handling with signature verification and idempotency protection
-- Real-time chat and notification safeguards with participant authorization
-- Stricter dispute validation and booking lifecycle handling
-- Better test coverage for booking, payment, disputes, and socket authorization
-- Progressive Web App support and SEO-ready frontend assets
+- Secure authentication and access control
+- Real-time chat and notifications
+- Razorpay-powered bookings and webhooks
+- PWA-ready frontend with SEO support
+- Structured dispute and booking lifecycle handling
+- Production-focused backend hardening and automated tests
 
 ---
 
-## Core Features
+## Why Rently?
+
+Rently combines the convenience of a marketplace with the trust and control of a modern platform.
+
+| Area | What makes it strong |
+|---|---|
+| Trust | Secure auth, booking validation, dispute handling, and payment verification |
+| Speed | Fast UI flows, real-time updates, and immediate notifications |
+| Reliability | Stable startup flow, resilient payment processing, and backend safeguards |
+| Experience | Clean marketplace journey for both renters and owners |
+| Scale | Modular architecture built for future growth and integrations |
+
+---
+
+## Core Experience
 
 ### For Renters
 - Discover listings through a polished marketplace experience
-- Search and filter products by category, location, and availability
-- Book items with date-based availability checks and transparent pricing
-- Pay securely through Razorpay with order verification
-- Receive real-time updates for bookings, payments, and messages
+- Search and filter by category, location, and availability
+- Book assets with transparent pricing and date validation
+- Complete payments securely through Razorpay
+- Receive real-time booking and message updates
 - Leave reviews and track rental activity
 
 ### For Owners
 - Create rich listings with images, pricing, and availability details
-- Manage incoming booking requests and update booking status
-- Receive notifications for new requests and important updates
+- Manage incoming booking requests and update booking statuses
+- Receive real-time notifications for new activity
 - Maintain trust through review history and secure handover flows
 
 ### Platform & Admin
@@ -77,20 +83,43 @@ The current version is focused on reliability and production-readiness, with imp
 
 ---
 
+## How It Works
+
+Rently is designed as a smooth end-to-end experience for both sides of the marketplace:
+
+1. **List** — Owners create attractive listings with pricing, availability, and media.
+2. **Discover** — Renters browse listings, compare details, and choose a preferred option.
+3. **Book** — Availability checks and booking rules ensure the request is valid.
+4. **Pay** — Secure Razorpay flows handle order creation and payment confirmation.
+5. **Manage** — Real-time notifications and chat keep both parties aligned throughout the rental lifecycle.
+6. **Review** — Completed experiences end with feedback and trust-building history.
+
+```mermaid
+flowchart LR
+    A[Owner Lists Item] --> B[Renters Discover Listings]
+    B --> C[Booking Request Created]
+    C --> D[Secure Payment]
+    D --> E[Booking Confirmed]
+    E --> F[Chat + Notifications]
+    F --> G[Review & Reputation]
+```
+
+---
+
 ## Architecture
 
-Rently uses a decoupled monorepo architecture:
+Rently follows a clean decoupled architecture:
 
 - Frontend: Next.js PWA with Tailwind CSS, React Context, and interactive UI components
 - Backend: Node.js + Express REST API with Socket.io for real-time communication
 - Data layer: PostgreSQL managed through Prisma ORM
-- Integrations: Razorpay payments, Cloudinary media uploads, Firebase auth support, Google Maps APIs
+- Integrations: Razorpay, Cloudinary, Firebase, Google Maps, and more
 
 ```text
 Client (Next.js PWA)
   └── API + WebSocket Server (Node.js / Express / Socket.io)
         └── PostgreSQL + Prisma
-              └── Razorpay / Cloudinary / Firebase / Maps
+              └── Payments / Media / Auth / Maps
 ```
 
 ---
@@ -103,7 +132,7 @@ Client (Next.js PWA)
 - Tailwind CSS
 - Socket.io Client
 - Google Maps API
-- Three.js / Recharts for richer UI experiences
+- Three.js, Recharts, and modern UI components
 - next-pwa and next-sitemap for PWA and SEO support
 
 ### Backend
@@ -118,19 +147,19 @@ Client (Next.js PWA)
 - Cloudinary SDK
 - Helmet, CORS, rate limiting, and Winston logging
 
-### Testing & DevOps
+### Quality & Delivery
 - Jest
 - Supertest
 - GitHub Actions CI workflow
 
 ---
 
-## Local Development Setup
+## Quick Start
 
 ### Prerequisites
 - Node.js 20+
 - PostgreSQL 14+
-- Optional: Razorpay, Cloudinary, Firebase, Google Maps, SendGrid, and Twilio credentials for full functionality
+- Optional credentials for Razorpay, Cloudinary, Firebase, Google Maps, SendGrid, and Twilio for full functionality
 
 ### 1. Clone the repository
 
@@ -146,7 +175,7 @@ cd backend
 npm install
 ```
 
-Create a `backend/.env` file with the required environment variables, including:
+Create a `backend/.env` file with the required values, for example:
 
 ```env
 PORT=5050
@@ -162,7 +191,7 @@ CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-Then initialize Prisma and start the API:
+Initialize Prisma and start the API:
 
 ```bash
 npx prisma generate
@@ -196,9 +225,9 @@ npm run dev
 
 ## Testing
 
-The project includes automated backend tests for core flows such as booking transitions, payment verification, dispute validation, and socket authorization.
+The project includes automated backend tests for booking flows, payments, disputes, and socket authorization.
 
-Run tests locally:
+Run the suite locally:
 
 ```bash
 cd backend
@@ -232,6 +261,56 @@ rently/
 │   └── styles/
 └── README.md
 ```
+
+---
+
+## Features at a Glance
+
+Here is a quick snapshot of the product experience:
+
+- 🔐 Secure authentication and access control
+- 💬 Real-time chat and instant notifications
+- 💳 Razorpay-backed booking and payment flow
+- 📍 Location-aware listing discovery
+- 🧠 Structured booking, review, and dispute handling
+- 📱 PWA-ready frontend experience with SEO support
+
+---
+
+## Built For
+
+Rently is designed for a wide range of use cases:
+
+- **Individuals** who want to monetize unused items
+- **Small businesses** that need flexible equipment access
+- **Communities** that value shared ownership and lower costs
+- **Local marketplaces** that want a trusted rental experience
+- **Startups** building a modern peer-to-peer commerce platform
+
+---
+
+## Demo Preview
+
+A polished product experience is already in place, with the following UI and workflow areas ready for showcase:
+
+- Marketplace listing discovery
+- Booking request and confirmation flow
+- Secure payment and receipt experience
+- Messaging and notification center
+- Owner dashboard and rental management
+
+> Add screenshots here later to turn this into a visual product showcase.
+
+---
+
+## Roadmap
+
+Planned improvements include:
+- Expanded marketplace search and recommendation intelligence
+- Deeper analytics for owners and admins
+- More advanced dispute and moderation workflows
+- Broader payment and wallet capabilities
+- Mobile-first usability refinements
 
 ---
 
