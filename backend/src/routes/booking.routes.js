@@ -360,8 +360,16 @@ router.get('/:id/timeline', requireAuth, async (req, res, next) => {
 
     let pickupSignatures = null;
     let returnSignatures = null;
-    try { pickupSignatures = JSON.parse(booking.pickupSignatures || '{}'); } catch {}
-    try { returnSignatures = JSON.parse(booking.returnSignatures || '{}'); } catch {}
+    try {
+      pickupSignatures = JSON.parse(booking.pickupSignatures || '{}');
+    } catch (err) {
+      pickupSignatures = {};
+    }
+    try {
+      returnSignatures = JSON.parse(booking.returnSignatures || '{}');
+    } catch (err) {
+      returnSignatures = {};
+    }
 
     const events = [];
 

@@ -7,7 +7,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: 'Not found' });
-    const { passwordHash, ...rest } = user;
+    const { passwordHash: _passwordHash, ...rest } = user;
     res.json(rest);
   } catch (e) { next(e); }
 });
@@ -20,7 +20,7 @@ router.patch('/me', requireAuth, async (req, res, next) => {
       avatarUrl: z.string().url().optional(),
     }).parse(req.body);
     const user = await prisma.user.update({ where: { id: req.user.id }, data });
-    const { passwordHash, ...rest } = user;
+    const { passwordHash: _passwordHash, ...rest } = user;
     res.json(rest);
   } catch (e) { next(e); }
 });
@@ -40,7 +40,7 @@ router.post('/verify', requireAuth, async (req, res, next) => {
       }
     });
 
-    const { passwordHash, ...rest } = user;
+    const { passwordHash: _passwordHash, ...rest } = user;
     res.json({ message: 'Identity verified successfully', user: rest });
   } catch (e) { next(e); }
 });

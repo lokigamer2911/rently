@@ -244,7 +244,7 @@ router.get('/', async (req, res, next) => {
 
     const responseListings = filteredListings.map(l => {
       const avgRating = l.reviews.length ? l.reviews.reduce((sum, r) => sum + r.rating, 0) / l.reviews.length : 0;
-      const { reviews, ...rest } = l;
+      const { reviews: _reviews, ...rest } = l;
       return { ...normalizeListing(rest), averageRating: avgRating };
     });
     

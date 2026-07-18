@@ -12,7 +12,7 @@ const strongPassword = z
   .string()
   .min(8, 'Password must be at least 8 characters')
   .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
-  .regex(/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'Password must contain at least one number or special character');
+  .regex(/\d|[^a-zA-Z0-9]/, 'Password must contain at least one number or special character');
 
 // Email + password signup
 router.post('/signup', async (req, res, next) => {
@@ -119,7 +119,7 @@ router.post('/logout', requireAuth, async (req, res, next) => {
 });
 
 function sanitize(u) {
-  const { passwordHash, ...rest } = u;
+  const { passwordHash: _passwordHash, ...rest } = u;
   return rest;
 }
 
