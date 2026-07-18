@@ -13,6 +13,13 @@ All changes are non-breaking and preserve existing API behavior. No database sch
   - `src/routes/listing.routes.js` — minor variable rename to avoid unused-var warning
   - `src/routes/user.routes.js` — minor variable renames to avoid unused-var warnings
 
+### Dependency updates (safe fixes)
+- chore: Applied non-breaking `npm audit fix --no-force` to address several transitive vulnerabilities. Some moderate/high advisories remain that require forceful upgrades (e.g., `firebase-admin` -> `14.2.0`) which may be breaking. See `npm audit` output for details.
+
+Notes:
+- The `package-lock.json` was updated and committed. No direct `package.json` major-version changes were applied.
+- Requesting confirmation before applying `npm audit fix --force` (major upgrades) because those can change runtime behavior or require manual review.
+
 Notes:
 - No public API endpoints were modified in their input/output contracts.
 - No Prisma schema migrations or `prisma` changes were applied.
