@@ -44,6 +44,16 @@ server.on('error', (err) => {
 });
 
 const scheduleCleanup = () => {
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL not set — skipping scheduled booking cleanup.');
+    return;
+  }
+
+  if (process.env.NODE_ENV === 'test') {
+    console.log('NODE_ENV=test — skipping scheduled booking cleanup.');
+    return;
+  }
+
   const prisma = require('./config/prisma');
   setInterval(async () => {
     try {
