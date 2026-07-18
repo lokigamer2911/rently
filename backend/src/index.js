@@ -37,10 +37,31 @@ server.on('error', (err) => {
   }
   if (err.code === 'EADDRINUSE') {
     console.error(`Ports ${startPort}-${currentPort} are in use. Set PORT to a free value.`);
-    process.exit(1);
+    try {
+      if (server && server.listening) {
+        server.close(() => process.exit(1));
+        setTimeout(() => process.exit(1), 5000);
+      } else {
+        process.exit(1);
+      }
+    } catch (e) {
+      console.error('Failed to shutdown server gracefully:', e);
+      process.exit(1);
+    }
+    return;
   }
   console.error('Server error:', err);
-  process.exit(1);
+  try {
+    if (server && server.listening) {
+      server.close(() => process.exit(1));
+      setTimeout(() => process.exit(1), 5000);
+    } else {
+      process.exit(1);
+    }
+  } catch (e) {
+    console.error('Failed to shutdown server gracefully:', e);
+    process.exit(1);
+  }
 });
 
 const scheduleCleanup = () => {

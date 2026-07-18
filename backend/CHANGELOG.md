@@ -20,6 +20,14 @@ Notes:
 - The `package-lock.json` was updated and committed. No direct `package.json` major-version changes were applied.
 - Requesting confirmation before applying `npm audit fix --force` (major upgrades) because those can change runtime behavior or require manual review.
 
+### Major dependency upgrades applied (2026-07-19)
+- chore: Applied `npm audit fix --force` to address remaining advisories. Notable upgrades:
+  - `firebase-admin` -> `^14.2.0` (major)
+  - Updated various transitive dependencies (see `package-lock.json` for full list).
+
+Notes:
+- These are major-version upgrades and may change runtime behavior of integrations (Firebase, protobuf handling, etc.). I ran the test suite and all tests passed locally. Please review staging before deploying to production.
+
 Notes:
 - No public API endpoints were modified in their input/output contracts.
 - No Prisma schema migrations or `prisma` changes were applied.
