@@ -30,3 +30,5 @@ coverage/
 
 # Ad-hoc scripts
 /backend/scratch/
+.ideavo/project
+*.log
