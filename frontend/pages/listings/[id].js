@@ -20,14 +20,26 @@ import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
 import TermsModal from '../../components/TermsModal';
 
+const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+function sanitizeId(raw) {
+  if (!raw) return '';
+  const val = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof val !== 'string') return '';
+  const trimmed = val.trim();
+  if (!ID_PATTERN.test(trimmed)) return '';
+  return trimmed;
+}
+
 export default function ListingDetail() {
   const router = useRouter();
   const { user } = useAuth();
-  const { id } = router.query;
+  const rawId = router.query?.id;
+  const safeId = sanitizeId(rawId);
   const [accessToken, setAccessToken] = useState('');
   const accessParam = accessToken ? `?access=${encodeURIComponent(accessToken)}` : '';
-  const { data: listing } = useSWR(id ? `/listings/${id}${accessParam}` : null, fetcher);
-  const { data: booked } = useSWR(id ? `/listings/${id}/availability${accessParam}` : null, fetcher);
+  const { data: listing } = useSWR(safeId ? `/listings/${safeId}${accessParam}` : null, fetcher);
+  const { data: booked } = useSWR(safeId ? `/listings/${safeId}/availability${accessParam}` : null, fetcher);
   const { addToCart } = useCart();
   const isOwner = user && listing && (
     user.id === listing.ownerId || 
@@ -41,11 +53,12 @@ export default function ListingDetail() {
   const [showTerms, setShowTerms] = useState(false);
 
   useEffect(() => {
-    if (!router.isReady || !id || !user || accessToken || router.query.access) return;
+    if (!router.isReady || !rawId || !user || accessToken || router.query.access) return;
+    if (!safeId) return;
 
     const issueAccessToken = async () => {
       try {
-        const { data } = await api.post(`/listings/${id}/access`);
+        const { data } = await api.post(`/listings/${safeId}/access`);
         const nextAccessToken = data.accessToken;
         if (nextAccessToken) {
           setAccessToken(nextAccessToken);
