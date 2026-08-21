@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String?        @unique
+  phone         String?        @unique
+  passwordHash  String?
+  firebaseUid   String?        @unique
+  name          String?
+  avatarUrl     String?
+  bio           String?
+  role          String         @default("USER")
+  isVerified    Boolean        @default(false)
+  isSuperhost   Boolean        @default(false)
+  tokenVersion  Int            @default(0)  // Incremented on logout to invalidate all active tokens
+  refreshToken  String?        @unique     // Hashed refresh token for rotation
+  idProofUrl    String?
+  address       String?
+
+  // Account lockout fields
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+
+  // Email verification fields
+  emailVerified       Boolean  @default(false)
+  emailVerifyToken    String?  @unique
+  emailVerifyExpires  DateTime?
+
+  // Password reset fields
+  passwordResetToken   String?  @unique
+  passwordResetExpires DateTime?
+
+  // Session tracking
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
+  userAgent    String?
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  bookings      Booking[]      @relation("Renter")
+  listings      Listing[]
+  messagesSent  Message[]      @relation("MsgSender")
+  notifications Notification[]
+  reviewsGiven  Review[]       @relation("ReviewAuthor")
+  reviewsRecv   Review[]       @relation("ReviewTarget")
+  threadsA      Thread[]       @relation("ThreadUserA")
+  threadsB      Thread[]       @relation("ThreadUserB")
+  alerts        Alert[]        @relation("UserAlerts")
+  disputesReported Dispute[]   @relation("DisputeReporter")
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  slug     String    @unique
+  icon     String?
+  listings Listing[]
+}
+
+model Listing {
+  id          String    @id @default(cuid())
+  ownerId     String
+  categoryId  String
+  title       String
+  description String
+  pricePerDay Int
+  deposit     Int       @default(0)
+  depositNote String?
+  city        String
+  address     String?
+  lat         Float?
+  lng         Float?
+  images      String    @default("[]")
+  blockedDates String   @default("[]")
+  available   Boolean   @default(true)
+  requiresVerification Boolean @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+  category    Category  @relation(fields: [categoryId], references: [id])
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  reviews     Review[]
+  alerts      Alert[]   @relation("ListingAlerts")
+
+  @@index([categoryId])
+  @@index([city])
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  listingId   String
+  renterId    String
+  startDate   DateTime
+  endDate     DateTime
+  totalAmount Int
+  serviceFee  Int      @default(0)
+  refundAmount Int     @default(0)
+  depositType String   @default("CASH")
+  depositNote String?
+  status      String   @default("PENDING") // PENDING, CONFIRMED, PICKED_UP, COMPLETED, CANCELLED, DISPUTED
+  
+  handoverOTP String?
+  returnOTP   String?
+  pickupPhotos String   @default("[]")
+  returnPhotos String   @default("[]")
+  pickupSignatures String @default("{}")
+  returnSignatures String @default("{}")
+  handoverAt  DateTime?
+  returnAt    DateTime?
+
+  createdAt   DateTime @default(now())
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  renter      User     @relation("Renter", fields: [renterId], references: [id])
+  payment     Payment?
+  disputes    Dispute[]
+  reviews     Review[]
+
+  @@index([listingId, startDate, endDate])
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  bookingId         String   @unique
+  razorpayOrderId   String   @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Int
+  status            String   @default("CREATED")
+  createdAt         DateTime @default(now())
+  booking           Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  listingId String
+  authorId  String
+  targetId  String
+  rating    Int
+  comment   String?
+  photos    String   @default("[]")
+  bookingId String?
+  createdAt DateTime @default(now())
+  author    User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  target    User     @relation("ReviewTarget", fields: [targetId], references: [id])
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+}
+
+model Thread {
+  id        String    @id @default(cuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime  @default(now())
+  messages  Message[]
+  userA     User      @relation("ThreadUserA", fields: [userAId], references: [id])
+  userB     User      @relation("ThreadUserB", fields: [userBId], references: [id])
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  threadId  String
+  senderId  String
+  content   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  sender    User     @relation("MsgSender", fields: [senderId], references: [id])
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Alert {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  user      User     @relation("UserAlerts", fields: [userId], references: [id])
+  listing   Listing  @relation("ListingAlerts", fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+}
+
+model Dispute {
+  id        String   @id @default(cuid())
+  bookingId String
+  userId    String
+  reason    String
+  status    String   @default("OPEN") // OPEN, RESOLVED
+  createdAt DateTime @default(now())
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user      User     @relation("DisputeReporter", fields: [userId], references: [id])
+
+  @@index([bookingId])
+}

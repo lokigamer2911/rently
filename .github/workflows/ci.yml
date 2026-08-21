@@ -1,0 +1,273 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  security-events: write  # Required for Snyk to upload SARIF results
+
+jobs:
+  # ──────────────────────────────────────────────
+  # 1. Security Scan — npm audit (both packages)
+  # ──────────────────────────────────────────────
+  security-audit:
+    name: "🔒 Dependency Audit"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      # Cache node_modules for faster runs
+      - name: Cache backend node_modules
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
+
+      - name: Cache frontend node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
+
+      - name: Install Backend Dependencies
+        run: cd backend && npm ci --ignore-scripts
+
+      - name: Install Frontend Dependencies
+        run: cd frontend && npm ci --legacy-peer-deps --ignore-scripts
+
+      # npm audit: fail on moderate+ vulnerabilities
+      # --audit-level=moderate: report moderate, high, and critical
+      # --omit=dev: skip devDependencies (optional — remove flag to include them)
+      - name: Audit Backend Dependencies
+        run: |
+          cd backend
+          echo "🔍 Scanning backend dependencies for known vulnerabilities..."
+          npm audit --audit-level=moderate --omit=dev 2>&1 | tee audit-results.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Backend Audit Complete (exit: $EXIT_CODE)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          # Exit with audit code — fails the job on moderate+ vulnerabilities
+          exit $EXIT_CODE
+
+      - name: Audit Frontend Dependencies
+        run: |
+          cd frontend
+          echo "🔍 Scanning frontend dependencies for known vulnerabilities..."
+          npm audit --audit-level=moderate 2>&1 | tee audit-results.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Frontend Audit Complete (exit: $EXIT_CODE)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit $EXIT_CODE
+
+  # ──────────────────────────────────────────────
+  # 2. Snyk Security Scan — continuous monitoring
+  # ──────────────────────────────────────────────
+  snyk-scan:
+    name: "🛡️ Snyk Vulnerability Scan"
+    runs-on: ubuntu-latest
+    # Only run Snyk on pushes to main (not every PR to avoid noise)
+    # For PRs, Snyk GitHub App is better (comments directly on PR)
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Cache backend node_modules
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
+
+      - name: Cache frontend node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
+
+      - name: Install Backend Dependencies
+        run: cd backend && npm ci --ignore-scripts
+
+      - name: Install Frontend Dependencies
+        run: cd frontend && npm ci --legacy-peer-deps --ignore-scripts
+
+      # Snyk test: scans for vulnerabilities and license issues
+      # Uploads results to GitHub Security tab as SARIF
+      - name: Snyk Backend Test
+        uses: snyk/actions/node@master
+        continue-on-error: true  # Don't fail CI — report only
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --file=backend/package.json --severity-threshold=high --json-file-output=snyk-backend.json
+
+      - name: Snyk Frontend Test
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --file=frontend/package.json --severity-threshold=high --json-file-output=snyk-frontend.json
+
+      # Upload SARIF to GitHub Security tab
+      - name: Upload Snyk Results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-backend.json
+
+  # ──────────────────────────────────────────────
+  # 3. Lint — catch code quality issues early
+  # ──────────────────────────────────────────────
+  lint:
+    name: "🔍 Lint & Code Quality"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Cache backend node_modules
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
+
+      - name: Install Backend Dependencies
+        run: cd backend && npm ci
+
+      - name: Lint Backend
+        run: |
+          cd backend
+          echo "🔍 Running ESLint on backend..."
+          npm run lint 2>&1 | tee lint-results.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Backend Lint Complete (exit: $EXIT_CODE)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit $EXIT_CODE
+
+  # ──────────────────────────────────────────────
+  # 4. Build & Test — existing pipeline (enhanced)
+  # ──────────────────────────────────────────────
+  build-and-test:
+    name: "🏗️ Build & Test"
+    runs-on: ubuntu-latest
+    needs: [security-audit, lint]  # Only build if security & lint pass
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Cache backend node_modules
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
+
+      - name: Cache frontend node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
+
+      - name: Cache frontend .next
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install Frontend Dependencies
+        run: cd frontend && npm ci --legacy-peer-deps
+
+      - name: Build Frontend
+        run: cd frontend && npm run build
+
+      - name: Install Backend Dependencies
+        run: cd backend && npm ci
+
+      - name: Run Backend Tests
+        run: cd backend && npm test
+
+  # ──────────────────────────────────────────────
+  # 5. Security Summary — post results to PR
+  # ──────────────────────────────────────────────
+  security-summary:
+    name: "📋 Security Summary"
+    runs-on: ubuntu-latest
+    needs: [security-audit, snyk-scan, lint, build-and-test]
+    if: always() && github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post Security Summary to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const security = '${{ needs.security-audit.result }}' === 'success' ? '✅' : '❌';
+            const snyk = '${{ needs.snyk-scan.result }}' === 'success' || '${{ needs.snyk-scan.result }}' === 'skipped' ? '✅' : '⚠️';
+            const lint = '${{ needs.lint.result }}' === 'success' ? '✅' : '❌';
+            const build = '${{ needs.build-and-test.result }}' === 'success' ? '✅' : '❌';
+
+            const body = `## 🔒 Security Scan Results
+
+            | Check | Status | Description |
+            |-------|--------|-------------|
+            | Dependency Audit | ${security} | npm audit — known vulnerabilities in dependencies |
+            | Snyk Scan | ${snyk} | Snyk — continuous vulnerability monitoring |
+            | Lint | ${lint} | ESLint — code quality & security patterns |
+            | Build & Test | ${build} | Build + unit tests |
+
+            ---
+            *Generated by Rently CI/CD Pipeline 🤖*`;
+
+            // Find existing bot comment to update (avoid duplicate comments)
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Security Scan Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

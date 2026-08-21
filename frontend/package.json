@@ -1,0 +1,40 @@
+{
+  "name": "rentrex-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "next-sitemap",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@react-google-maps/api": "^2.20.3",
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.0.0",
+    "axios": "^1.7.7",
+    "firebase": "^10.14.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
+    "leaflet": "^1.9.4",
+    "next": "^15.2.0",
+    "next-pwa": "^5.6.0",
+    "next-sitemap": "^4.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^5.6.0",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^3.8.1",
+    "socket.io-client": "^4.8.3",
+    "swr": "^2.2.5",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.2.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14"
+  }
+}
