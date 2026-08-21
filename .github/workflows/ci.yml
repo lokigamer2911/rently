@@ -41,12 +41,10 @@ jobs:
       - name: Install Backend Dependencies
         run: cd backend && npm ci --ignore-scripts
 
+      # Frontend: use npm install (no lockfile committed yet — generates one on the fly)
       - name: Install Frontend Dependencies
-        run: cd frontend && npm ci --legacy-peer-deps --ignore-scripts
+        run: cd frontend && npm install --legacy-peer-deps --ignore-scripts
 
-      # npm audit: fail on moderate+ vulnerabilities
-      # --audit-level=moderate: report moderate, high, and critical
-      # --omit=dev: skip devDependencies (optional — remove flag to include them)
       - name: Audit Backend Dependencies
         run: |
           cd backend
@@ -57,7 +55,6 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "  Backend Audit Complete (exit: $EXIT_CODE)"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          # Exit with audit code — fails the job on moderate+ vulnerabilities
           exit $EXIT_CODE
 
       - name: Audit Frontend Dependencies
@@ -105,7 +102,7 @@ jobs:
         run: cd backend && npm ci --ignore-scripts
 
       - name: Install Frontend Dependencies
-        run: cd frontend && npm ci --legacy-peer-deps --ignore-scripts
+        run: cd frontend && npm install --legacy-peer-deps --ignore-scripts
 
       # Snyk test: scans for vulnerabilities and license issues
       # Uploads results to GitHub Security tab as SARIF
@@ -155,7 +152,7 @@ jobs:
           key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
 
       - name: Install Backend Dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm install
 
       - name: Lint Backend
         run: |
@@ -203,13 +200,13 @@ jobs:
           key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install Frontend Dependencies
-        run: cd frontend && npm ci --legacy-peer-deps
+        run: cd frontend && npm install --legacy-peer-deps
 
       - name: Build Frontend
         run: cd frontend && npm run build
 
       - name: Install Backend Dependencies
-        run: cd backend && npm ci
+        run: cd backend && npm install
 
       - name: Run Backend Tests
         run: cd backend && npm test
