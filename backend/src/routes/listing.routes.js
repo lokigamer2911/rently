@@ -254,7 +254,7 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/:id/access', requireAuth, async (req, res, next) => {
+router.post('/:id/access', requireAuth, validateId, async (req, res, next) => {
   try {
     const listing = await prisma.listing.findUnique({ where: { id: req.params.id } });
     if (!listing) return res.status(404).json({ error: 'Listing not found' });

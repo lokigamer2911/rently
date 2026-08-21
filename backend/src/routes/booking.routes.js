@@ -7,6 +7,14 @@ const { z } = require('zod');
 const { createNotification, notifyWaitlist } = require('../utils/notifications');
 const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
 
+const CUID_RE = /^[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!CUID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+}
+
 /** Generate a cryptographically secure 6-digit OTP */
 function generateOTP() {
   return crypto.randomInt(100000, 999999).toString();
@@ -43,7 +51,7 @@ function getAccessToken(req) {
   return req.query?.access || req.body?.access || null;
 }
 
-router.post('/:id/access', requireAuth, async (req, res, next) => {
+router.post('/:id/access', requireAuth, validateId, async (req, res, next) => {
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: req.params.id },
@@ -180,7 +188,7 @@ router.get('/incoming', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.patch('/:id/status', requireAuth, async (req, res, next) => {
+router.patch('/:id/status', requireAuth, validateId, async (req, res, next) => {
   try {
     const { status } = z.object({
       status: z.enum(['CONFIRMED', 'CANCELLED', 'COMPLETED']),
@@ -254,7 +262,7 @@ router.patch('/:id/status', requireAuth, async (req, res, next) => {
 });
 
 // Verify Pickup (OTP + Photos + Signatures) — rate limited to prevent brute-force
-router.patch('/:id/pickup', requireAuth, otpVerifyLimiter, async (req, res, next) => {
+router.patch('/:id/pickup', requireAuth, validateId, otpVerifyLimiter, async (req, res, next) => {
   try {
     const { otp, photos, signatures } = z.object({
       otp: z.string().length(6),
@@ -304,7 +312,7 @@ router.patch('/:id/pickup', requireAuth, otpVerifyLimiter, async (req, res, next
 });
 
 // Verify Return (OTP + Photos + Signatures) — rate limited to prevent brute-force
-router.patch('/:id/return', requireAuth, otpVerifyLimiter, async (req, res, next) => {
+router.patch('/:id/return', requireAuth, validateId, otpVerifyLimiter, async (req, res, next) => {
   try {
     const { otp, photos, signatures } = z.object({
       otp: z.string().length(6),
@@ -347,7 +355,7 @@ router.patch('/:id/return', requireAuth, otpVerifyLimiter, async (req, res, next
 });
 
 // GET Timeline for a booking
-router.get('/:id/timeline', requireAuth, async (req, res, next) => {
+router.get('/:id/timeline', requireAuth, validateId, async (req, res, next) => {
   try {
     const accessToken = getAccessToken(req);
     if (accessToken && !verifySignedResourceAccessToken(accessToken, req.params.id, 'booking', req.user.id)) {
