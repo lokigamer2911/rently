@@ -2,6 +2,14 @@ const router = require('express').Router();
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 
+const CUID_RE = /^[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!CUID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+}
+
 // Get all threads for current user
 router.get('/threads', requireAuth, async (req, res, next) => {
   try {
@@ -24,7 +32,7 @@ router.get('/threads', requireAuth, async (req, res, next) => {
 });
 
 // Get messages for a thread
-router.get('/threads/:id', requireAuth, async (req, res, next) => {
+router.get('/threads/:id', requireAuth, validateId, async (req, res, next) => {
   try {
     const thread = await prisma.thread.findUnique({
       where: { id: req.params.id },

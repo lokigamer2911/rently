@@ -3,6 +3,14 @@ const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
 
+const CUID_RE = /^[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!CUID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+}
+
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     const { bookingId, rating, comment, photos } = z.object({
@@ -72,7 +80,7 @@ router.post('/', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.get('/listing/:id', async (req, res, next) => {
+router.get('/listing/:id', validateId, async (req, res, next) => {
   try {
     const reviews = await prisma.review.findMany({
       where: { listingId: req.params.id },

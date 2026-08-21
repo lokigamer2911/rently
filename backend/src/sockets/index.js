@@ -30,7 +30,9 @@ function registerSocket(io) {
 
     socket.on('message:send', async (data, callback) => {
       try {
-        const { threadId, content } = data;
+        // SECURITY: Prevent prototype pollution — only extract expected fields
+        const threadId = typeof data?.threadId === 'string' ? data.threadId : '';
+        const content = typeof data?.content === 'string' ? data.content : '';
 
         // Validate content: must be a non-empty string under 2000 chars
         if (!content || typeof content !== 'string' || !content.trim()) {
