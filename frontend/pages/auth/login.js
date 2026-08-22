@@ -11,6 +11,15 @@ import { useAuth } from '../../hooks/useAuth';
 import TiltCard from '../../components/TiltCard';
 import { setStoredAuthToken } from '../../lib/authToken';
 
+// Only allow relative paths starting with / to prevent open redirect attacks
+function sanitizeRedirect(raw) {
+  if (typeof raw !== 'string') return '/listings';
+  const trimmed = raw.trim();
+  // Must start with / and NOT // (protocol-relative URL)
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return trimmed;
+  return '/listings';
+}
+
 export default function Login() {
   const router = useRouter();
   const [tab, setTab] = useState('email');
@@ -28,7 +37,7 @@ export default function Login() {
     : '';
 
   const redirectToSignup = (submittedEmail) => {
-    const dest = typeof router.query.redirect === 'string' ? router.query.redirect : '/listings';
+    const dest = sanitizeRedirect(router.query.redirect);
     router.replace({
       pathname: '/auth/signup',
       query: {
@@ -42,7 +51,7 @@ export default function Login() {
   const finish = (data) => {
     setStoredAuthToken(data.token);
     login(data);
-    const dest = router.query.redirect || '/listings';
+    const dest = sanitizeRedirect(router.query.redirect);
     router.push(dest);
   };
 

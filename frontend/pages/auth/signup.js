@@ -11,6 +11,14 @@ import Button from '../../components/Button';
 import TiltCard from '../../components/TiltCard';
 import { setStoredAuthToken } from '../../lib/authToken';
 
+// Only allow relative paths starting with / to prevent open redirect attacks
+function sanitizeRedirect(raw) {
+  if (typeof raw !== 'string') return '/listings';
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return trimmed;
+  return '/listings';
+}
+
 export default function Signup() {
   const router = useRouter();
   const { login } = useAuth();
@@ -39,7 +47,7 @@ export default function Signup() {
         setStoredAuthToken(data.token);
         login(data);
         toast.success('Welcome to Rentrex!');
-        const dest = router.query.redirect || '/listings';
+        const dest = sanitizeRedirect(router.query.redirect);
         router.push(dest);
         return;
       }
@@ -52,7 +60,7 @@ export default function Signup() {
       setStoredAuthToken(data.token);
       login(data);
       toast.success('Welcome to Rentrex!');
-      const dest = router.query.redirect || '/listings';
+      const dest = sanitizeRedirect(router.query.redirect);
       router.push(dest);
     } catch (error) {
       console.error('Signup error:', error);

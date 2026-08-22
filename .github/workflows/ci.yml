@@ -39,11 +39,11 @@ jobs:
           key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
 
       - name: Install Backend Dependencies
-        run: cd backend && npm ci --ignore-scripts
+        run: cd backend && npm install --ignore-scripts --no-audit
 
       # Frontend: use npm install (no lockfile committed yet — generates one on the fly)
       - name: Install Frontend Dependencies
-        run: cd frontend && npm install --legacy-peer-deps --ignore-scripts
+        run: cd frontend && npm install --legacy-peer-deps --ignore-scripts --no-audit
 
       # npm audit — reports vulnerabilities but doesn't block merge
       # Some CVEs in transitive deps may not have fixes yet
@@ -103,10 +103,10 @@ jobs:
           key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
 
       - name: Install Backend Dependencies
-        run: cd backend && npm ci --ignore-scripts
+        run: cd backend && npm install --ignore-scripts --no-audit
 
       - name: Install Frontend Dependencies
-        run: cd frontend && npm install --legacy-peer-deps --ignore-scripts
+        run: cd frontend && npm install --legacy-peer-deps --ignore-scripts --no-audit
 
       # Snyk test: scans for vulnerabilities and license issues
       # Uploads results to GitHub Security tab as SARIF
@@ -156,7 +156,7 @@ jobs:
           key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
 
       - name: Install Backend Dependencies
-        run: cd backend && npm install
+        run: cd backend && npm install --ignore-scripts --no-audit
 
       # Run ESLint — warns on issues but doesn't block merge
       # Fix warnings in follow-up PRs to keep codebase clean
@@ -207,13 +207,13 @@ jobs:
           key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install Frontend Dependencies
-        run: cd frontend && npm install --legacy-peer-deps
+        run: cd frontend && npm install --legacy-peer-deps --no-audit
 
       - name: Build Frontend
         run: cd frontend && npm run build
 
       - name: Install Backend Dependencies
-        run: cd backend && npm install
+        run: cd backend && npm install --no-audit
 
       - name: Run Backend Tests
         run: cd backend && npm test
