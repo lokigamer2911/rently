@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { FiCompass, FiMessageCircle, FiPackage, FiShoppingCart, FiZap, FiMenu, FiUser, FiClock, FiLogOut, FiBell, FiActivity, FiTrendingUp } from 'react-icons/fi';
+import { FiCompass, FiMessageCircle, FiPackage, FiShoppingCart, FiZap, FiMenu, FiUser, FiClock, FiLogOut, FiBell, FiActivity, FiTrendingUp, FiHeart, FiSun, FiMoon } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../context/CartContext';
+import { useTheme } from '../context/ThemeContext';
 import useSWR from 'swr';
 import { fetcher } from '../lib/api';
 import Button from './Button';
@@ -15,6 +16,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const { theme, toggleTheme } = useTheme();
 
   const { data: notifications } = useSWR(user ? '/notifications' : null, fetcher, { refreshInterval: 5000 });
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
@@ -75,6 +77,10 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <Button onClick={toggleTheme} variant="ghost" className="!h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label="Toggle theme">
+              {theme === 'dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
+            </Button>
+
             <Button href="/notifications" variant="ghost" className="relative !h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label="Notifications">
               <FiBell size={18} />
               {unreadCount > 0 && (
@@ -122,6 +128,10 @@ export default function Navbar() {
                       <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
                         <FiUser size={16} />
                         Profile
+                      </Link>
+                      <Link href="/favorites" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
+                        <FiHeart size={16} />
+                        Favorites
                       </Link>
                       <Link href="/listings/mine" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
                         <FiPackage size={16} />

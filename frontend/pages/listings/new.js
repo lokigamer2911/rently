@@ -378,20 +378,34 @@ export default function NewListing() {
               <h2 className="mt-2 text-2xl text-slate-900">Imagery</h2>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              {form.images.map(u => (
-                <div key={u} className="relative group">
-                  <img src={u} alt="Listing preview" className="w-24 h-24 object-cover rounded-2xl border border-slate-200" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-2xl flex items-center justify-center">
-                    <FiCheck className="text-white" size={20} />
+            <div className="space-y-3">
+              {form.images.length > 0 && (
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {form.images.length} image{form.images.length === 1 ? '' : 's'} uploaded — first image is the cover
+                </p>
+              )}
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {form.images.map((u, idx) => (
+                  <div key={u} className="relative group aspect-square">
+                    <img src={u} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover rounded-2xl border border-slate-200" />
+                    {idx === 0 && (
+                      <span className="absolute top-1.5 left-1.5 bg-brand-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">Cover</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
+                      className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition shadow-lg"
+                    >
+                      ×
+                    </button>
                   </div>
-                </div>
-              ))}
-              <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl hover:border-brand-500 hover:bg-brand-50 transition cursor-pointer group">
-                <FiCamera className="text-slate-400 group-hover:text-brand-600" size={24} />
-                <span className="text-[10px] mt-2 text-slate-400 font-bold uppercase tracking-widest">Add</span>
-                <input type="file" multiple accept="image/*" className="hidden" onChange={upload} />
-              </label>
+                ))}
+                <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl hover:border-brand-500 hover:bg-brand-50 transition cursor-pointer group">
+                  <FiCamera className="text-slate-400 group-hover:text-brand-600" size={24} />
+                  <span className="text-[10px] mt-2 text-slate-400 font-bold uppercase tracking-widest">Add</span>
+                  <input type="file" multiple accept="image/*" className="hidden" onChange={upload} />
+                </label>
+              </div>
             </div>
           </section>
 

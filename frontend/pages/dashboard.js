@@ -1,4 +1,4 @@
-import { FiDollarSign, FiPackage, FiActivity, FiArrowRight, FiUser, FiPlus } from 'react-icons/fi';
+import { FiDollarSign, FiPackage, FiActivity, FiArrowRight, FiUser, FiPlus, FiStar } from 'react-icons/fi';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { fetcher } from '../lib/api';
@@ -75,11 +75,11 @@ export default function Dashboard() {
             <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Trust Score</p>
             <div className="mt-4 flex items-center gap-3 pop-layer">
                <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
-                  <FiDollarSign size={20} />
+                  <FiStar size={20} />
                </div>
-               <span className="text-3xl font-bold text-slate-900">98%</span>
+               <span className="text-3xl font-bold text-slate-900">{stats.averageRating ? `${stats.averageRating.toFixed(1)}★` : '—'}</span>
             </div>
-            <p className="mt-2 text-xs text-slate-500">Based on recent reviews</p>
+            <p className="mt-2 text-xs text-slate-500">{stats.reviewCount ? `From ${stats.reviewCount} review${stats.reviewCount === 1 ? '' : 's'}` : 'No reviews yet'}</p>
           </div>
         </TiltCard>
       </div>

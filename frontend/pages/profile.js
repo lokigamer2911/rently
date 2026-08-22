@@ -118,6 +118,13 @@ export default function Profile() {
                   {isEditing ? 'Cancel Editing' : 'Edit Profile'}
                 </Button>
                 
+                {!user.emailVerified && (
+                  <Button href="/auth/verify-email-pending" variant="primary" className="!bg-amber-600 hover:!bg-amber-700 w-full flex items-center justify-center gap-2">
+                    <FiMail size={16} />
+                    Verify Email
+                  </Button>
+                )}
+                
                 {!user.isVerified && (
                   <Button href="/auth/verify" variant="primary" className="!bg-amber-600 hover:!bg-amber-700 w-full flex items-center justify-center gap-2">
                     <FiShield size={16} />
@@ -136,8 +143,8 @@ export default function Profile() {
                 <span>Identity Verified</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
-                <FiCheckCircle className="text-emerald-500" />
-                <span>Email Confirmed</span>
+                <FiCheckCircle className={user.emailVerified ? 'text-emerald-500' : 'text-slate-300'} />
+                <span>Email {user.emailVerified ? 'Confirmed' : 'Not Confirmed'}</span>
               </div>
               {user.phone && (
                 <div className="flex items-center gap-3 text-sm text-slate-600">

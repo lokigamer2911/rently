@@ -2,6 +2,7 @@ const express = require('express');
 const { z, ZodError } = require('zod');
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
+const { sendDisputeNotificationEmail } = require('../utils/email');
 
 const CUID_RE = /^[a-z0-9]{20,}$/i;
 function validateId(req, res, next) {
@@ -70,6 +71,16 @@ router.post('/:bookingId', requireAuth, async (req, res) => {
       where: { id: bookingId },
       data: { status: 'DISPUTED' }
     });
+
+    // Notify all admins via email
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true, name: true } });
+    for (const admin of admins) {
+      if (admin.email) {
+        sendDisputeNotificationEmail(admin.email, admin.name, { bookingId, reason }).catch(err => {
+          console.warn('Failed to send dispute notification email:', err.message);
+        });
+      }
+    }
 
     res.json(dispute);
   } catch (error) {

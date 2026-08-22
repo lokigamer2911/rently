@@ -5,6 +5,7 @@ const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
 const { createNotification, notifyWaitlist } = require('../utils/notifications');
+const { sendBookingRequestEmail } = require('../utils/email');
 const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
 
 const CUID_RE = /^[a-z0-9]{20,}$/i;
@@ -137,7 +138,7 @@ router.post('/', requireAuth, async (req, res, next) => {
       },
     });
 
-    // Notify owner (Real-time)
+    // Notify owner (Real-time + email)
     const io = req.app.get('io');
     await createNotification(io, {
       userId: listing.ownerId,
@@ -146,6 +147,14 @@ router.post('/', requireAuth, async (req, res, next) => {
       body: `Someone wants to rent your ${listing.title}. View details now.`,
       link: '/bookings',
     });
+
+    // Send email notification to owner
+    const owner = await prisma.user.findUnique({ where: { id: listing.ownerId }, select: { email: true, name: true } });
+    if (owner?.email) {
+      sendBookingRequestEmail(owner.email, owner.name, { listing, startDate: start, endDate: end }).catch(err => {
+        console.warn('Failed to send booking request email:', err.message);
+      });
+    }
 
     // Notify renter of their Pickup OTP
     await createNotification(io, {
@@ -239,7 +248,7 @@ router.patch('/:id/status', requireAuth, validateId, async (req, res, next) => {
       });
     }
 
-    // Notify the other party
+    // Notify the other party (real-time + email)
     const io = req.app.get('io');
     const targetUserId = isOwner ? booking.renterId : booking.listing.ownerId;
     const roleName = isOwner ? 'Host' : 'Renter';
@@ -251,6 +260,17 @@ router.patch('/:id/status', requireAuth, validateId, async (req, res, next) => {
       body: `The ${roleName} has ${status.toLowerCase()} the booking for ${booking.listing.title}.`,
       link: '/bookings',
     });
+
+    // Send email for confirmed bookings
+    if (status === 'CONFIRMED') {
+      const { sendBookingConfirmationEmail } = require('../utils/email');
+      const renter = await prisma.user.findUnique({ where: { id: booking.renterId }, select: { email: true, name: true } });
+      if (renter?.email) {
+        sendBookingConfirmationEmail(renter.email, renter.name, { listing: booking.listing, startDate: booking.startDate, endDate: booking.endDate, totalAmount: booking.totalAmount }).catch(err => {
+          console.warn('Failed to send booking confirmation email:', err.message);
+        });
+      }
+    }
 
     // Notify waitlist if item became available
     if (status === 'CANCELLED' || status === 'COMPLETED') {

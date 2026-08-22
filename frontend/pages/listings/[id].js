@@ -12,6 +12,9 @@ import {
   FiStar,
   FiUser,
   FiBell,
+  FiShare2,
+  FiCopy,
+  FiHeart,
 } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
 import MapView from '../../components/MapView';
@@ -51,6 +54,50 @@ export default function ListingDetail() {
   const [depositType, setDepositType] = useState('CASH');
   const [depositNote, setDepositNote] = useState('');
   const [showTerms, setShowTerms] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
+  useEffect(() => {
+    if (user && safeId) {
+      api.get(`/favorites/check/${safeId}`).then(res => {
+        setIsFavorited(res.data.isFavorited);
+      }).catch(() => {});
+    }
+  }, [user, safeId]);
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      toast.error('Please sign in to save favorites');
+      return;
+    }
+    try {
+      const { data } = await api.post(`/favorites/toggle/${safeId}`);
+      setIsFavorited(data.isFavorited);
+      toast.success(data.isFavorited ? 'Saved to favorites' : 'Removed from favorites');
+    } catch (err) {
+      toast.error('Failed to update favorite');
+    }
+  };
+
+  const shareListing = async (platform) => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const text = `Check out this rental: ${listing?.title || 'Amazing item on Rently'}`;
+    
+    if (platform === 'copy') {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+      setShowShareMenu(false);
+      return;
+    }
+    if (platform === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`);
+    } else if (platform === 'twitter') {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`);
+    } else if (platform === 'facebook') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`);
+    }
+    setShowShareMenu(false);
+  };
 
   useEffect(() => {
     if (!router.isReady || !rawId || !user || accessToken || router.query.access) return;
@@ -175,12 +222,43 @@ export default function ListingDetail() {
             Back to catalog
           </Link>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             {listing.category?.name && <span className="floating-pill">{listing.category.name}</span>}
             <span className="floating-pill">
               <FiShield size={13} />
               Secure booking flow
             </span>
+            {listing.viewCount > 0 && (
+              <span className="floating-pill">
+                {listing.viewCount} view{listing.viewCount === 1 ? '' : 's'}
+              </span>
+            )}
+            <div className="relative">
+              <button onClick={() => setShowShareMenu(!showShareMenu)} className="floating-pill cursor-pointer hover:bg-white/90 transition-all" type="button">
+                <FiShare2 size={13} />
+                Share
+              </button>
+              {showShareMenu && (
+                <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl bg-white border border-slate-100 shadow-xl z-50 p-2">
+                  <button onClick={() => shareListing('copy')} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors" type="button">
+                    <FiCopy size={14} /> Copy Link
+                  </button>
+                  <button onClick={() => shareListing('whatsapp')} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors" type="button">
+                    💬 WhatsApp
+                  </button>
+                  <button onClick={() => shareListing('twitter')} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors" type="button">
+                    🐦 Twitter
+                  </button>
+                  <button onClick={() => shareListing('facebook')} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-xl transition-colors" type="button">
+                    📘 Facebook
+                  </button>
+                </div>
+              )}
+            </div>
+            <button onClick={toggleFavorite} className="floating-pill cursor-pointer hover:bg-white/90 transition-all" type="button">
+              <FiHeart size={13} className={isFavorited ? 'text-red-500 fill-red-500' : ''} />
+              {isFavorited ? 'Saved' : 'Save'}
+            </button>
           </div>
         </div>
 
@@ -527,6 +605,11 @@ export default function ListingDetail() {
         </div>
       </div>
 
+      {/* Similar Listings */}
+      {listing && (
+        <SimilarListings currentListing={listing} user={user} />
+      )}
+
       <TermsModal 
         isOpen={showTerms} 
         onClose={() => setShowTerms(false)} 
@@ -537,5 +620,57 @@ export default function ListingDetail() {
         }} 
       />
     </>
+  );
+}
+
+function SimilarListings({ currentListing, user }) {
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const { data: similar } = useSWR(
+    currentListing?.categoryId ? `/listings?categoryId=${currentListing.categoryId}` : null,
+    fetcher
+  );
+
+  const items = (similar || [])
+    .filter(l => l.id !== currentListing.id)
+    .slice(0, 3);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Similar listings</h2>
+        <Link href="/listings" className="text-brand-600 text-sm font-bold hover:underline">View all</Link>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map(l => (
+          <Link key={l.id} href={`/listings/${l.id}`} className="surface-card group flex h-full flex-col overflow-hidden p-0">
+            <div className="relative overflow-hidden">
+              {l.images?.[0] ? (
+                <img src={l.images[0]} alt={l.title} className="h-48 w-full object-cover transition duration-500 group-hover:scale-105" />
+              ) : (
+                <div className="h-48 w-full bg-slate-100 flex items-center justify-center text-slate-400">No image</div>
+              )}
+              <div className="absolute left-3 top-3">
+                <span className="label-pill">{l.category?.name || 'Category'}</span>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col p-5">
+              <h3 className="text-lg font-bold text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1">{l.title}</h3>
+              <p className="text-sm text-slate-500 mt-1 line-clamp-2">{l.description}</p>
+              <div className="mt-auto pt-4 flex items-center justify-between">
+                <p className="text-xl font-bold text-brand-700">Rs {(l.pricePerDay / 100).toFixed(0)}/day</p>
+                {l.averageRating > 0 && (
+                  <span className="flex items-center gap-1 text-sm text-amber-600 font-bold">
+                    <FiStar size={14} /> {l.averageRating.toFixed(1)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

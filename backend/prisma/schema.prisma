@@ -28,6 +28,11 @@ model User {
   failedLoginAttempts Int      @default(0)
   lockedUntil         DateTime?
 
+  // Bank details for payouts
+  bankAccountNumber  String?
+  bankIfsc           String?
+  bankName           String?
+
   // Email verification fields
   emailVerified       Boolean  @default(false)
   emailVerifyToken    String?  @unique
@@ -54,6 +59,7 @@ model User {
   threadsB      Thread[]       @relation("ThreadUserB")
   alerts        Alert[]        @relation("UserAlerts")
   disputesReported Dispute[]   @relation("DisputeReporter")
+  favorites     Favorite[]
 }
 
 model Category {
@@ -81,6 +87,7 @@ model Listing {
   blockedDates String   @default("[]")
   available   Boolean   @default(true)
   requiresVerification Boolean @default(false)
+  viewCount    Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   bookings    Booking[]
@@ -88,6 +95,7 @@ model Listing {
   owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   reviews     Review[]
   alerts      Alert[]   @relation("ListingAlerts")
+  favorites   Favorite[]
 
   @@index([categoryId])
   @@index([city])
@@ -214,4 +222,16 @@ model Dispute {
   user      User     @relation("DisputeReporter", fields: [userId], references: [id])
 
   @@index([bookingId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId])
 }

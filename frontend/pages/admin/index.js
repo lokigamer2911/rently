@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { api, fetcher } from '../../lib/api';
 import Button from '../../components/Button';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Admin() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [tab, setTab] = useState('users');
   const { data: stats } = useSWR('/admin/stats', fetcher);
   const { data: users, mutate: mutateUsers } = useSWR('/admin/users', fetcher);
@@ -24,6 +28,12 @@ export default function Admin() {
       toast.error('Failed to resolve dispute');
     }
   };
+
+  if (loading) return <div className="py-20 text-center animate-pulse">Loading...</div>;
+  if (!user || user.role !== 'ADMIN') {
+    if (typeof window !== 'undefined') router.push('/');
+    return null;
+  }
 
   return (
     <div className="space-y-6">

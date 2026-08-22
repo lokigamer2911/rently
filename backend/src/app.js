@@ -25,6 +25,7 @@ const chatRoutes = require('./routes/chat.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const adminRoutes = require('./routes/admin.routes');
 const disputeRoutes = require('./routes/dispute.routes');
+const favoriteRoutes = require('./routes/favorite.routes');
 
 const { registerSocket } = require('./sockets');
 
@@ -125,6 +126,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/disputes', disputeRoutes);
+app.use('/api/favorites', favoriteRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {
