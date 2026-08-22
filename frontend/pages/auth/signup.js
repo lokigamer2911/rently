@@ -46,9 +46,8 @@ export default function Signup() {
         });
         setStoredAuthToken(data.token);
         login(data);
-        toast.success('Welcome to Rentrex!');
-        const dest = sanitizeRedirect(router.query.redirect);
-        router.push(dest);
+        toast.success('Account created! Please verify your email.');
+        router.push({ pathname: '/auth/verify-email-pending', query: { email: form.email } });
         return;
       }
 
@@ -63,9 +62,8 @@ export default function Signup() {
 
       setStoredAuthToken(data.token);
       login(data);
-      toast.success('Welcome to Rentrex!');
-      const dest = sanitizeRedirect(router.query.redirect);
-      router.push(dest);
+      toast.success('Account created! Please verify your email.');
+      router.push({ pathname: '/auth/verify-email-pending', query: { email: form.email } });
     } catch (error) {
       console.error('Signup error:', error);
       toast.error(error.response?.data?.error || error.message || 'Failed to create account');
