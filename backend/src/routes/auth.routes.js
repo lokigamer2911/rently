@@ -2,7 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const prisma = require('../config/prisma');
-const admin = require('../config/firebase');
+const firebaseAdmin = require('../config/firebase');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const { cookieOptions, refreshCookieOptions } = require('../utils/cookie');
 const { requireAuth } = require('../middleware/auth');
@@ -355,7 +355,9 @@ router.post('/reset-password', async (req, res, next) => {
 router.post('/firebase', async (req, res, next) => {
   try {
     const { idToken } = z.object({ idToken: z.string() }).parse(req.body);
-    const decoded = await admin.auth().verifyIdToken(idToken);
+    const auth = firebaseAdmin.getAuth();
+    if (!auth) return res.status(500).json({ error: 'Firebase is not configured on this server' });
+    const decoded = await auth.verifyIdToken(idToken);
 
     let user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
     if (!user) {
