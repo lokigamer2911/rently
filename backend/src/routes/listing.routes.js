@@ -176,6 +176,13 @@ router.get('/stats/me', requireAuth, async (req, res, next) => {
     // Total listings count
     const totalListings = await prisma.listing.count({ where: { ownerId: userId } });
 
+    // Review stats for trust score
+    const reviewStats = await prisma.review.aggregate({
+      where: { listing: { ownerId: userId } },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+
     // Recent incoming bookings
     const incomingBookings = await prisma.booking.findMany({
       where: { listing: { ownerId: userId } },
@@ -191,6 +198,8 @@ router.get('/stats/me', requireAuth, async (req, res, next) => {
       totalEarnings,
       activeRentalsCount,
       totalListings,
+      averageRating: reviewStats._avg.rating,
+      reviewCount: reviewStats._count.rating,
       incomingBookings: incomingBookings.map(b => ({ ...b, listing: normalizeListing(b.listing) }))
     });
   } catch (e) { next(e); }

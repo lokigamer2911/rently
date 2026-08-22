@@ -7,7 +7,8 @@ import {
   FiArrowUpRight, 
   FiPackage, 
   FiClock,
-  FiArrowLeft
+  FiArrowLeft,
+  FiShield
 } from 'react-icons/fi';
 import { 
   AreaChart, 
@@ -22,6 +23,7 @@ import { fetcher } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import Link from 'next/link';
 import TiltCard from '../components/TiltCard';
+import Button from '../components/Button';
 
 export default function EarningsDashboard() {
   const { user } = useAuth();
@@ -225,36 +227,4 @@ export default function EarningsDashboard() {
   );
 }
 
-function FiShield(props) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-    </svg>
-  );
-}
 
-function Button({ children, variant = 'primary', className = '', ...props }) {
-  const base = "inline-flex items-center justify-center px-6 py-3 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed";
-  const variants = {
-    primary: "bg-brand-600 text-white shadow-brand hover:bg-brand-700 hover:scale-[1.02]",
-    secondary: "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-soft",
-    ghost: "bg-transparent text-slate-600 hover:bg-slate-100"
-  };
-
-  return (
-    <button className={`${base} ${variants[variant]} ${className}`} {...props}>
-      {children}
-    </button>
-  );
-}
