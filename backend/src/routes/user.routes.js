@@ -26,8 +26,17 @@ router.patch('/me', requireAuth, async (req, res, next) => {
       name: z.string().min(1).max(100).optional(),
       bio: z.string().max(500).optional(),
       avatarUrl: z.string().url().max(500).optional(),
+      bankAccountNumber: z.string().max(20).optional(),
+      bankIfsc: z.string().max(11).optional(),
+      bankName: z.string().max(100).optional(),
     }).parse(req.body);
     const user = await prisma.user.update({ where: { id: req.user.id }, data });
+    // Only update bank fields if provided
+    const bankData = {};
+    if (data.bankAccountNumber !== undefined) bankData.bankAccountNumber = data.bankAccountNumber;
+    if (data.bankIfsc !== undefined) bankData.bankIfsc = data.bankIfsc;
+    if (data.bankName !== undefined) bankData.bankName = data.bankName;
+
     const { passwordHash: _passwordHash, ...rest } = user;
     res.json(rest);
   } catch (e) { next(e); }

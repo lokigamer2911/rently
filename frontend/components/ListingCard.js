@@ -1,14 +1,42 @@
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FiArrowUpRight, FiMapPin, FiShoppingCart, FiStar, FiShield } from 'react-icons/fi';
+import { FiArrowUpRight, FiMapPin, FiShoppingCart, FiStar, FiShield, FiHeart } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { api } from '../lib/api';
 
 export default function ListingCard({ l }) {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const [isFavorited, setIsFavorited] = useState(false);
+
+  useEffect(() => {
+    if (user && l.id) {
+      api.get(`/favorites/check/${l.id}`).then(res => {
+        setIsFavorited(res.data.isFavorited);
+      }).catch(() => {});
+    }
+  }, [user, l.id]);
+
+  const toggleFavorite = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast.error('Please sign in to save favorites');
+      router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
+      return;
+    }
+    try {
+      const { data } = await api.post(`/favorites/toggle/${l.id}`);
+      setIsFavorited(data.isFavorited);
+      toast.success(data.isFavorited ? 'Saved to favorites' : 'Removed from favorites');
+    } catch (err) {
+      toast.error('Failed to update favorite');
+    }
+  };
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -45,6 +73,9 @@ export default function ListingCard({ l }) {
         )}
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(17,24,20,0.62)] via-transparent to-transparent" />
+        <button onClick={toggleFavorite} className="absolute right-4 top-4 z-10 p-2.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:scale-110 transition-all" type="button">
+          <FiHeart size={16} className={isFavorited ? 'text-red-500 fill-red-500' : 'text-slate-400'} />
+        </button>
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           {l.category?.name && <span className="label-pill">{l.category.name}</span>}
           {l.city && (

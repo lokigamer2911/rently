@@ -299,6 +299,12 @@ router.get('/:id', validateId, async (req, res, next) => {
     });
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
 
+    // Increment view count (fire-and-forget, don't block response)
+    prisma.listing.update({
+      where: { id: req.params.id },
+      data: { viewCount: { increment: 1 } },
+    }).catch(() => {});
+
     // Parse review photos
     if (listing.reviews) {
       listing.reviews = listing.reviews.map(r => ({

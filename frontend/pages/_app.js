@@ -3,11 +3,13 @@ import '../styles/button.css';
 import Layout from '../components/Layout';
 import { CartProvider } from '../context/CartContext';
 import { AuthProvider } from '../context/AuthContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import Head from 'next/head';
 import CookieConsent from '../components/CookieConsent';
 
 export default function App({ Component, pageProps }) {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <Head>
         <title>Rently | Peer-to-Peer Rental Marketplace</title>
@@ -19,6 +21,8 @@ export default function App({ Component, pageProps }) {
         <link rel="icon" type="image/png" href="/favicon.png" />
         <link rel="shortcut icon" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/favicon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#10b981" />
       </Head>
       <CartProvider>
         <Layout>
@@ -27,5 +31,6 @@ export default function App({ Component, pageProps }) {
         <CookieConsent />
       </CartProvider>
     </AuthProvider>
+    </ThemeProvider>
   );
 }
