@@ -3,6 +3,14 @@ const prisma = require('../config/prisma');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { z } = require('zod');
 
+const CUID_RE = /^[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!CUID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+}
+
 router.use(requireAuth, requireAdmin);
 
 router.get('/stats', async (_req, res, next) => {
@@ -27,8 +35,12 @@ router.get('/users', async (_req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.patch('/users/:id/role', async (req, res, next) => {
+router.patch('/users/:id/role', validateId, async (req, res, next) => {
   try {
+    // SECURITY: Prevent admins from demoting themselves
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ error: 'Admins cannot change their own role' });
+    }
     const { role } = z.object({ role: z.enum(['USER', 'ADMIN']) }).parse(req.body);
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -39,7 +51,7 @@ router.patch('/users/:id/role', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.delete('/listings/:id', async (req, res, next) => {
+router.delete('/listings/:id', validateId, async (req, res, next) => {
   try {
     await prisma.listing.delete({ where: { id: req.params.id } });
     res.json({ ok: true });

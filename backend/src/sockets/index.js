@@ -3,11 +3,22 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 
 function registerSocket(io) {
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error('No token'));
     try {
-      socket.user = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      // SECURITY: Verify token version matches DB (same as HTTP auth middleware)
+      // Otherwise logged-out users keep their socket connections alive
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, tokenVersion: true },
+      });
+      if (!user) return next(new Error('User not found'));
+      if (user.tokenVersion !== decoded.tokenVersion) {
+        return next(new Error('Session expired'));
+      }
+      socket.user = decoded;
       next();
     } catch {
       next(new Error('Invalid token'));
@@ -19,8 +30,24 @@ function registerSocket(io) {
 
     socket.on('message:send', async (data, callback) => {
       try {
-        const { threadId, content } = data;
+        // SECURITY: Prevent prototype pollution — only extract expected fields
+        const threadId = typeof data?.threadId === 'string' ? data.threadId : '';
+        const content = typeof data?.content === 'string' ? data.content : '';
+
+        // Validate content: must be a non-empty string under 2000 chars
+        if (!content || typeof content !== 'string' || !content.trim()) {
+          return callback?.({ ok: false, error: 'Message content is required' });
+        }
+        const trimmedContent = content.trim().slice(0, 2000);
+
+        if (!threadId || typeof threadId !== 'string') {
+          return callback?.({ ok: false, error: 'Invalid thread ID' });
+        }
+
         const thread = await prisma.thread.findUnique({ where: { id: threadId } });
+        if (!thread) {
+          return callback?.({ ok: false, error: 'Thread not found' });
+        }
 
         if (thread.userAId !== socket.user.id && thread.userBId !== socket.user.id) {
           return callback?.({ ok: false, error: 'Forbidden' });
@@ -30,7 +57,7 @@ function registerSocket(io) {
           data: {
             threadId,
             senderId: socket.user.id,
-            content
+            content: trimmedContent
           },
           include: { sender: { select: { id: true, name: true, avatarUrl: true } } }
         });
@@ -46,7 +73,7 @@ function registerSocket(io) {
           userId: targetId,
           type: 'NEW_MESSAGE',
           title: `New message from ${socket.user.name || 'someone'} 💬`,
-          body: content.length > 50 ? content.substring(0, 47) + '...' : content,
+          body: trimmedContent.length > 50 ? trimmedContent.substring(0, 47) + '...' : trimmedContent,
           link: `/chat/${threadId}`
         });
 

@@ -10,6 +10,14 @@ export function AuthProvider({ children }) {
   const startupRetryDone = useRef(false);
   const startupRetryTimer = useRef(null);
 
+  // Fetch CSRF token on mount (for double-submit cookie pattern)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    api.get('/auth/csrf-token').catch(() => {
+      // Non-critical — CSRF cookie may already exist from a previous session
+    });
+  }, []);
+
   const fetchUser = async ({ retryOn401 = false, useFallbackToken = false } = {}) => {
     try {
       const { data } = await api.get('/users/me', useFallbackToken ? { __useAuthFallback: true } : undefined);
@@ -24,7 +32,9 @@ export function AuthProvider({ children }) {
           }, 500);
           return;
         }
-        if (!hasFallbackToken) {
+        // Only clear user if we definitely have no valid session
+        // (don't clear on network errors)
+        if (!hasFallbackToken && !err.message?.includes('Network Error')) {
           setUser(null);
         }
       }
@@ -43,14 +53,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (data) => {
-    // Keep a temporary in-memory bearer fallback only for explicit retry flows
-    // after cookie auth fails. This is not persisted to localStorage.
     setStoredAuthToken(data.token);
     setUser(data.user);
   };
 
   const logout = async () => {
-    // Tell the server to increment tokenVersion and clear the cookie
     try {
       await api.post('/auth/logout'); 
     } catch {
@@ -58,6 +65,7 @@ export function AuthProvider({ children }) {
     }
     setStoredAuthToken(null);
     setUser(null);
+    // Hard redirect to clear all state
     window.location.href = '/';
   };
 

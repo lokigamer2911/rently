@@ -8,9 +8,21 @@ import { api } from '../../../lib/api';
 import MapView from '../../../components/MapView';
 import Button from '../../../components/Button';
 
+const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+function sanitizeId(raw) {
+  if (!raw) return '';
+  const val = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof val !== 'string') return '';
+  const trimmed = val.trim();
+  if (!ID_PATTERN.test(trimmed)) return '';
+  return trimmed;
+}
+
 export default function EditListing() {
   const router = useRouter();
-  const { id } = router.query;
+  const rawId = router.query?.id;
+  const safeId = sanitizeId(rawId);
   const { user } = useAuth();
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,17 +36,22 @@ export default function EditListing() {
   const [newBlockedDate, setNewBlockedDate] = useState('');
 
   useEffect(() => {
-    if (!id) return;
+    if (!rawId) return;
+    if (!safeId) {
+      toast.error('Invalid listing ID');
+      router.push('/listings/mine');
+      return;
+    }
 
     const fetchData = async () => {
       try {
-        const { data: accessData } = await api.post(`/listings/${id}/access`);
+        const { data: accessData } = await api.post(`/listings/${safeId}/access`);
         const nextAccessToken = accessData.accessToken || '';
         setAccessToken(nextAccessToken);
 
         const [catRes, listingRes] = await Promise.all([
           api.get('/categories'),
-          api.get(`/listings/${id}${nextAccessToken ? `?access=${encodeURIComponent(nextAccessToken)}` : ''}`)
+          api.get(`/listings/${safeId}${nextAccessToken ? `?access=${encodeURIComponent(nextAccessToken)}` : ''}`)
         ]);
         
         setCats(catRes.data);
@@ -69,7 +86,7 @@ export default function EditListing() {
     };
 
     fetchData();
-  }, [id, user]);
+  }, [rawId, safeId, user]);
 
   const upload = async (e) => {
     try {
@@ -100,9 +117,9 @@ export default function EditListing() {
         pricePerDay: Math.round(Number(form.pricePerDay) * 100), 
         deposit: Math.round(Number(form.deposit || 0) * 100) 
       };
-      await api.patch(`/listings/${id}${accessToken ? `?access=${encodeURIComponent(accessToken)}` : ''}`, payload);
+      await api.patch(`/listings/${safeId}${accessToken ? `?access=${encodeURIComponent(accessToken)}` : ''}`, payload);
       toast.success('Listing updated!');
-      router.push(`/listings/${id}${accessToken ? `?access=${encodeURIComponent(accessToken)}` : ''}`);
+      router.push(`/listings/${safeId}${accessToken ? `?access=${encodeURIComponent(accessToken)}` : ''}`);
     } catch (err) { 
       toast.error(err.response?.data?.error || 'Failed to update'); 
     } finally {

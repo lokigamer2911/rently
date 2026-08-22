@@ -10,6 +10,27 @@
   },
   "rules": {
     "no-console": ["warn", { "allow": ["warn", "error", "log"] }],
-    "no-unused-vars": ["warn", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }]
+    "no-unused-vars": ["warn", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }],
+
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-script-url": "error",
+
+    "no-shadow-restricted-names": "error",
+    "no-caller": "error",
+    "no-extend-native": "error",
+    "no-global-assign": "error",
+    "no-implicit-globals": "error",
+
+    "no-buffer-constructor": "error",
+    "no-new-buffer": "error",
+
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+
+    "no-var": "error",
+    "prefer-const": "warn",
+
+    "no-throw-literal": "error"
   }
 }

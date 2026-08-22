@@ -3,6 +3,14 @@ const { z, ZodError } = require('zod');
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 
+const CUID_RE = /^[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!CUID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+}
+
 const VALID_RESOLUTION_ACTIONS = ['CANCELLED', 'COMPLETED'];
 
 const resolveDisputeSchema = z.object({
@@ -26,6 +34,7 @@ const router = express.Router();
 router.post('/:bookingId', requireAuth, async (req, res) => {
   try {
     const { bookingId } = req.params;
+    if (!CUID_RE.test(bookingId)) return res.status(400).json({ error: 'Invalid ID format' });
     const { reason } = createDisputeSchema.parse(req.body);
 
     // Verify booking exists and user is part of it
@@ -40,6 +49,11 @@ router.post('/:bookingId', requireAuth, async (req, res) => {
 
     if (booking.renterId !== req.user.id && booking.listing.ownerId !== req.user.id) {
       return res.status(403).json({ error: 'You are not authorized to dispute this booking' });
+    }
+
+    // SECURITY: Only allow disputes on active bookings
+    if (!['CONFIRMED', 'PICKED_UP'].includes(booking.status)) {
+      return res.status(400).json({ error: `Cannot dispute a booking with status ${booking.status}` });
     }
 
     // Create dispute
@@ -97,6 +111,7 @@ router.post('/:id/resolve', requireAuth, async (req, res) => {
     }
 
     const { id } = req.params;
+    if (!CUID_RE.test(id)) return res.status(400).json({ error: 'Invalid ID format' });
     const { resolutionAction } = resolveDisputeSchema.parse(req.body);
 
     const dispute = await prisma.dispute.update({

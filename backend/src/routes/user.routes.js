@@ -3,6 +3,14 @@ const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
 
+const CUID_RE = /^[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!req.params.id || !CUID_RE.test(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
+  next();
+}
+
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
@@ -15,9 +23,9 @@ router.get('/me', requireAuth, async (req, res, next) => {
 router.patch('/me', requireAuth, async (req, res, next) => {
   try {
     const data = z.object({
-      name: z.string().optional(),
-      bio: z.string().optional(),
-      avatarUrl: z.string().url().optional(),
+      name: z.string().min(1).max(100).optional(),
+      bio: z.string().max(500).optional(),
+      avatarUrl: z.string().url().max(500).optional(),
     }).parse(req.body);
     const user = await prisma.user.update({ where: { id: req.user.id }, data });
     const { passwordHash: _passwordHash, ...rest } = user;
@@ -45,7 +53,7 @@ router.post('/verify', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.get('/:id', requireAuth, async (req, res, next) => {
+router.get('/:id', requireAuth, validateId, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {
       return res.status(404).json({ error: 'Not found' });

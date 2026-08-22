@@ -5,15 +5,31 @@ const razorpay = require('../config/razorpay');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
 const { createNotification } = require('../utils/notifications');
+const logger = require('../utils/logger');
 
 const createSignature = (payload, secret) => {
   const normalizedPayload = Buffer.isBuffer(payload) ? payload : Buffer.from(typeof payload === 'string' ? payload : JSON.stringify(payload));
   return crypto.createHmac('sha256', secret).update(normalizedPayload).digest('hex');
 };
 
-const processedConfirmationKeys = new Set();
+const processedConfirmationKeys = new Map();
 
 const getConfirmationKey = (orderId, paymentId) => `${orderId}:${paymentId}`;
+
+/** Check and atomically mark a confirmation key as processed */
+function tryMarkProcessed(key) {
+  if (processedConfirmationKeys.has(key)) return true;
+  processedConfirmationKeys.set(key, Date.now());
+  return false;
+}
+
+// Periodically clean up old keys (prevent unbounded memory growth)
+setInterval(() => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000; // 24 hours
+  for (const [key, timestamp] of processedConfirmationKeys) {
+    if (timestamp < cutoff) processedConfirmationKeys.delete(key);
+  }
+}, 60 * 60 * 1000); // Run hourly
 
 const normalizeWebhookEvent = (event) => {
   if (!event || typeof event !== 'object') return null;
@@ -166,10 +182,9 @@ router.post('/verify', requireAuth, async (req, res, next) => {
     }
 
     const confirmationKey = getConfirmationKey(razorpay_order_id, razorpay_payment_id);
-    if (processedConfirmationKeys.has(confirmationKey)) {
+    if (tryMarkProcessed(confirmationKey)) {
       return res.json({ ok: true, message: 'already processed' });
     }
-    processedConfirmationKeys.add(confirmationKey);
 
     const confirmation = await confirmBooking({
       razorpayOrderId: razorpay_order_id,
@@ -200,7 +215,8 @@ router.post('/webhook', async (req, res) => {
     const expected = createSignature(bodyBuffer, process.env.RAZORPAY_WEBHOOK_SECRET);
 
     if (signature !== expected) {
-      console.log('Webhook signature mismatch', { signature, expected, bodyText });
+      // SECURITY: Never log the expected HMAC — it reveals the webhook secret's output
+      logger.warn('Webhook signature mismatch', { hasSignature: !!signature });
       return res.status(400).send('bad signature');
     }
 
@@ -214,10 +230,9 @@ router.post('/webhook', async (req, res) => {
       const payload = event.event === 'payment.captured' ? event.payload.payment.entity : event.payload.order.entity;
       const orderId = payload.order_id || payload.id;
       const confirmationKey = getConfirmationKey(orderId, payload.id);
-      if (processedConfirmationKeys.has(confirmationKey)) {
+      if (tryMarkProcessed(confirmationKey)) {
         return res.json({ ok: true, message: 'already processed' });
       }
-      processedConfirmationKeys.add(confirmationKey);
 
       const confirmation = await confirmBooking({
         razorpayOrderId: orderId,

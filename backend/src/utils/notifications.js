@@ -1,6 +1,25 @@
 const prisma = require('../config/prisma');
 const { sendEmail, sendSMS } = require('./messaging');
 
+/** Escape HTML special characters to prevent XSS/injection in email templates */
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Validate and sanitize a URL to prevent javascript: and data: URI attacks */
+function safeUrl(base, path) {
+  if (!path || typeof path !== 'string') return null;
+  // Only allow paths starting with / to prevent open redirect
+  if (!path.startsWith('/')) return null;
+  return `${base}${path}`;
+}
+
 const createNotification = async (io, { userId, type, title, body, link }) => {
   try {
     const notification = await prisma.notification.create({
@@ -20,15 +39,16 @@ const createNotification = async (io, { userId, type, title, body, link }) => {
 
     if (user) {
       if (user.email) {
+        const safeLink = safeUrl(process.env.CLIENT_URL || '', link);
         sendEmail({
           to: user.email,
           subject: title,
           text: body,
           html: `
             <div style="font-family: sans-serif; padding: 20px; color: #333;">
-              <h2 style="color: #243c2d;">${title}</h2>
-              <p>${body}</p>
-              ${link ? `<a href="${process.env.CLIENT_URL}${link}" style="display: inline-block; padding: 10px 20px; background: #243c2d; color: #fff; text-decoration: none; border-radius: 5px;">View on Rentrex</a>` : ''}
+              <h2 style="color: #243c2d;">${escapeHtml(title)}</h2>
+              <p>${escapeHtml(body)}</p>
+              ${safeLink ? `<a href="${escapeHtml(safeLink)}" style="display: inline-block; padding: 10px 20px; background: #243c2d; color: #fff; text-decoration: none; border-radius: 5px;">View on Rentrex</a>` : ''}
             </div>
           `
         });

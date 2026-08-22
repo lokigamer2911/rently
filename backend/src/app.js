@@ -2,17 +2,9 @@
 require('dotenv').config(); // Reload env config
 const logger = require('./utils/logger');
 
-// Automatically sync database schema on startup in production environments only
-if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
-  try {
-    const { execSync } = require('child_process');
-    logger.info('Production startup: Syncing database schema with prisma db push...');
-    execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-    logger.info('Prisma db push completed successfully.');
-  } catch (error) {
-    logger.error('Error during database schema sync (prisma db push):', error);
-  }
-}
+// SECURITY: Removed automatic 'prisma db push --accept-data-loss' on production startup.
+// That command silently drops columns/data on schema drift — catastrophic for production.
+// Use 'prisma migrate deploy' in your CI/CD pipeline instead.
 
 const express = require('express');
 const helmet = require('helmet');
@@ -35,6 +27,8 @@ const adminRoutes = require('./routes/admin.routes');
 const disputeRoutes = require('./routes/dispute.routes');
 
 const { registerSocket } = require('./sockets');
+
+const { csrfProtection, csrfTokenEndpoint } = require('./middleware/csrf');
 
 const app = express();
 
@@ -82,11 +76,13 @@ const allowedOrigins = [
   'http://localhost:3001',
 ];
 
+// SECURITY: Only allow our specific Vercel subdomain, NOT any *.vercel.app
+// (Anyone can deploy to Vercel — wildcard allows credential theft from attacker sites)
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin && process.env.NODE_ENV !== 'production') return callback(null, true);
-      const isAllowed = allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'));
+      const isAllowed = allowedOrigins.includes(origin);
       if (isAllowed) {
         callback(null, true);
       } else {
@@ -111,6 +107,9 @@ app.use(
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
+// CSRF protection (production only, state-changing methods)
+app.use(csrfProtection);
+
 app.get('/health', (_, res) => res.json({ ok: true }));
 
 app.use('/api/auth', authLimiter, authRoutes);
@@ -130,7 +129,10 @@ app.use('/api/disputes', disputeRoutes);
 // Global error handler
 app.use((err, _req, res, _next) => {
   logger.error('Unhandled Server Error:', err);
-  res.status(err.status || 500).json({ error: err.message || 'Server error' });
+  const isProd = process.env.NODE_ENV === 'production';
+  res.status(err.status || 500).json({
+    error: isProd ? 'Internal server error' : (err.message || 'Server error'),
+  });
 });
 
 module.exports = { app, registerSocket, allowedOrigins };

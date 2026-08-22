@@ -20,8 +20,28 @@ model User {
   isVerified    Boolean        @default(false)
   isSuperhost   Boolean        @default(false)
   tokenVersion  Int            @default(0)  // Incremented on logout to invalidate all active tokens
+  refreshToken  String?        @unique     // Hashed refresh token for rotation
   idProofUrl    String?
   address       String?
+
+  // Account lockout fields
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+
+  // Email verification fields
+  emailVerified       Boolean  @default(false)
+  emailVerifyToken    String?  @unique
+  emailVerifyExpires  DateTime?
+
+  // Password reset fields
+  passwordResetToken   String?  @unique
+  passwordResetExpires DateTime?
+
+  // Session tracking
+  lastLoginAt  DateTime?
+  lastLoginIp  String?
+  userAgent    String?
+
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   bookings      Booking[]      @relation("Renter")

@@ -1,22 +1,42 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 
+const ACCESS_SECRET = process.env.JWT_SECRET;
+const isProd = process.env.NODE_ENV === 'production';
+
 /**
  * requireAuth — Validates JWT and verifies the token version matches the DB.
- * If the user has logged out (tokenVersion incremented), their old tokens
- * are immediately rejected even if they haven't expired yet.
+ * 
+ * SECURITY: In production, ONLY accepts httpOnly cookie auth.
+ * Bearer token fallback is disabled to prevent token theft via XSS.
  */
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
-  // Check cookie first, fallback to Authorization header
-  const token = req.cookies?.token || (header.startsWith('Bearer ') ? header.slice(7) : null);
+  
+  // In production: cookie only (prevents XSS token theft)
+  // In development: allow Bearer fallback for testing tools
+  let token;
+  if (isProd) {
+    token = req.cookies?.token || null;
+  } else {
+    token = req.cookies?.token || (header.startsWith('Bearer ') ? header.slice(7) : null);
+  }
+
   if (!token) return res.status(401).json({ error: 'Missing token' });
 
   let decoded;
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    decoded = jwt.verify(token, ACCESS_SECRET);
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    }
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
+  // Verify token type is access (not refresh)
+  if (decoded.type && decoded.type !== 'access') {
+    return res.status(401).json({ error: 'Invalid token type' });
   }
 
   // Server-side revocation check: fetch user's current tokenVersion
@@ -28,13 +48,10 @@ async function requireAuth(req, res, next) {
 
     if (!user) return res.status(401).json({ error: 'User not found' });
 
-    // If the stored version is greater than the token's version, this token
-    // was issued before the last logout and must be rejected.
     if (user.tokenVersion !== decoded.tokenVersion) {
       return res.status(401).json({ error: 'Session expired. Please log in again.' });
     }
 
-    // Attach full decoded payload + confirmed role to request
     req.user = { ...decoded, role: user.role };
     next();
   } catch (e) {

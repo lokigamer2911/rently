@@ -11,6 +11,15 @@ import { useAuth } from '../../hooks/useAuth';
 import TiltCard from '../../components/TiltCard';
 import { setStoredAuthToken } from '../../lib/authToken';
 
+// Only allow relative paths starting with / to prevent open redirect attacks
+function sanitizeRedirect(raw) {
+  if (typeof raw !== 'string') return '/listings';
+  const trimmed = raw.trim();
+  // Must start with / and NOT // (protocol-relative URL)
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return trimmed;
+  return '/listings';
+}
+
 export default function Login() {
   const router = useRouter();
   const [tab, setTab] = useState('email');
@@ -28,7 +37,7 @@ export default function Login() {
     : '';
 
   const redirectToSignup = (submittedEmail) => {
-    const dest = typeof router.query.redirect === 'string' ? router.query.redirect : '/listings';
+    const dest = sanitizeRedirect(router.query.redirect);
     router.replace({
       pathname: '/auth/signup',
       query: {
@@ -42,7 +51,7 @@ export default function Login() {
   const finish = (data) => {
     setStoredAuthToken(data.token);
     login(data);
-    const dest = router.query.redirect || '/listings';
+    const dest = sanitizeRedirect(router.query.redirect);
     router.push(dest);
   };
 
@@ -233,6 +242,11 @@ export default function Login() {
           <form onSubmit={emailLogin} className="space-y-4">
             <input className="input" type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <div className="flex justify-end">
+              <Link href="/auth/forgot-password" className="text-xs font-semibold text-slate-400 hover:text-brand-600 transition">
+                Forgot password?
+              </Link>
+            </div>
             <Button type="submit" variant="primary" className="w-full !py-3.5">
               Continue to account
               <FiArrowRight size={16} />

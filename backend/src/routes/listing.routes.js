@@ -200,7 +200,9 @@ router.get('/', async (req, res, next) => {
   try {
     const { q, city, categoryId, minPrice, maxPrice, lat, lng, radius, minRating } = req.query;
     const where = { available: true };
-    if (q) where.title = { contains: q, mode: 'insensitive' };
+    // SECURITY: Limit search query length to prevent performance abuse
+    const sanitizedQ = typeof q === 'string' ? q.trim().slice(0, 100) : null;
+    if (sanitizedQ) where.title = { contains: sanitizedQ, mode: 'insensitive' };
     
     if (lat && lng && radius) {
       const latNum = parseFloat(lat);
@@ -252,7 +254,7 @@ router.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/:id/access', requireAuth, async (req, res, next) => {
+router.post('/:id/access', requireAuth, validateId, async (req, res, next) => {
   try {
     const listing = await prisma.listing.findUnique({ where: { id: req.params.id } });
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
