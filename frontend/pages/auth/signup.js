@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { FiArrowRight, FiShield, FiZap } from 'react-icons/fi';
 import { api } from '../../lib/api';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 import { auth, firebaseInitError } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
@@ -54,6 +54,10 @@ export default function Signup() {
 
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
       await updateProfile(cred.user, { displayName: form.name });
+      // Send Firebase verification email (non-blocking)
+      sendEmailVerification(cred.user).catch(err => {
+        console.error('Failed to send verification email:', err);
+      });
       const idToken = await cred.user.getIdToken();
       const { data } = await api.post('/auth/firebase', { idToken });
 
