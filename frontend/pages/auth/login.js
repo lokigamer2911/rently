@@ -29,9 +29,13 @@ export default function Login() {
   const [code, setCode] = useState('');
   const [confirmation, setConfirmation] = useState(null);
   const [isGoogleRedirecting, setIsGoogleRedirecting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const { login } = useAuth();
-  const initError = firebaseInitError || (auth === null ? 'Firebase Auth is not initialized' : null);
+  // Only show Firebase error after client-side hydration (auth is null during SSR)
+  const initError = mounted ? (firebaseInitError || (auth === null ? 'Firebase Auth is not initialized' : null)) : null;
   const loginMessage = typeof router.query.message === 'string' && router.query.message.trim()
     ? router.query.message
     : '';

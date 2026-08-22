@@ -384,6 +384,10 @@ router.post('/firebase', async (req, res, next) => {
         },
       });
     } else {
+      // Generate email verification token for new Firebase users
+      const { raw: verifyToken, hash: verifyHash, expiresAt: verifyExpires } = 
+        await createExpiringToken(60 * 24); // 24 hours
+
       user = await prisma.user.create({
         data: {
           firebaseUid: decoded.uid,
@@ -392,8 +396,17 @@ router.post('/firebase', async (req, res, next) => {
           name: decoded.name || decoded.email?.split('@')[0] || 'User',
           avatarUrl: decoded.picture || null,
           emailVerified: !!decoded.email_verified,
+          emailVerifyToken: verifyHash,
+          emailVerifyExpires: verifyExpires,
         },
       });
+
+      // Send verification email if email is not already verified (non-blocking)
+      if (decoded.email && !decoded.email_verified) {
+        sendVerificationEmail(decoded.email, verifyToken, user.name).catch(err => {
+          logger.error('Failed to send Firebase user verification email:', err.message);
+        });
+      }
     }
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
