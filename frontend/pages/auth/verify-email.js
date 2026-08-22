@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiLoader, FiArrowRight } from 'react-icons/fi';
 import { api } from '../../lib/api';
 import Button from '../../components/Button';
 
@@ -60,7 +60,8 @@ export default function VerifyEmail() {
           <h1 className="text-3xl font-bold text-slate-900 mb-3">Email verified!</h1>
           <p className="text-slate-500 mb-8">{message}</p>
           <Button variant="primary" onClick={() => router.push('/listings')} className="w-full !py-3.5">
-            Start browsing
+            Start browsing listings
+            <FiArrowRight size={16} />
           </Button>
         </>
       )}

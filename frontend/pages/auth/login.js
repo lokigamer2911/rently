@@ -55,6 +55,12 @@ export default function Login() {
   const finish = (data) => {
     setStoredAuthToken(data.token);
     login(data);
+    // If email is not verified, redirect to verification pending page
+    if (data.user && !data.user.emailVerified && data.user.email) {
+      toast('Please verify your email to access all features.', { icon: '📧' });
+      router.push({ pathname: '/auth/verify-email-pending', query: { email: data.user.email } });
+      return;
+    }
     const dest = sanitizeRedirect(router.query.redirect);
     router.push(dest);
   };
