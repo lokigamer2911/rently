@@ -83,8 +83,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4">
-      <div className="grid gap-8 md:grid-cols-[1fr_2fr]">
+    <div className="max-w-4xl mx-auto py-6 sm:py-10 px-4 mobile-nav-spacer">
+      <div className="grid gap-6 sm:gap-8 md:grid-cols-[1fr_2fr]">
         {/* Sidebar / Photo */}
         <div className="space-y-6">
           <TiltCard max={10} glare={false} className="h-full">

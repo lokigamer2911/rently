@@ -12,11 +12,11 @@ export default function Inbox() {
   if (!user) return <div className="py-20 text-center">Please log in to view your messages</div>;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-5 sm:space-y-8 mobile-nav-spacer">
       <header>
-        <p className="eyebrow mb-3">Messages</p>
-        <h1 className="section-title text-5xl">Your Inbox</h1>
-        <p className="section-copy mt-4">Manage your rental conversations and clarify details with hosts.</p>
+        <p className="eyebrow mb-2 sm:mb-3">Messages</p>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>Your Inbox</h1>
+        <p className="section-copy mt-3 sm:mt-4">Manage your rental conversations.</p>
       </header>
 
       <div className="surface-card !p-0 overflow-hidden border-2 border-slate-50 shadow-2xl">

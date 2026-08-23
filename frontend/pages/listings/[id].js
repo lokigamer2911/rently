@@ -213,9 +213,7 @@ export default function ListingDetail() {
 
   return (
     <>
-      <script src="https://checkout.razorpay.com/v1/checkout.js" async />
-
-      <div className="space-y-8 md:space-y-10">
+      <script src="https://checkout.razorpay.com/v1/checkout.js" async />        <div className="space-y-6 sm:space-y-8 md:space-y-10 pb-24 md:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/listings" className="btn-ghost">
             <FiArrowLeft size={16} />
@@ -263,12 +261,12 @@ export default function ListingDetail() {
         </div>
 
         <section className="hero-panel">
-          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="grid gap-5 sm:gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <div>
-              <p className="eyebrow mb-5">Featured rental</p>
-              <h1 className="section-title text-5xl md:text-6xl">{listing.title}</h1>
+              <p className="eyebrow mb-3 sm:mb-5">Featured rental</p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>{listing.title}</h1>
 
-              <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-600">
+              <div className="mt-4 sm:mt-6 flex flex-wrap gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600">
                 <span className="floating-pill">
                   <FiMapPin size={13} />
                   {listing.city || 'Location available on request'}
@@ -285,9 +283,9 @@ export default function ListingDetail() {
                 )}
               </div>
 
-              <p className="section-copy mt-6 max-w-2xl">{listing.description}</p>
+              <p className="section-copy mt-4 sm:mt-6 max-w-2xl">{listing.description}</p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="mt-5 sm:mt-8 grid grid-cols-3 gap-2 sm:gap-4">
                 <div className="mini-stat">
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Price Per Day</p>
                   <p className="mt-3 text-3xl text-brand-700">Rs {(listing.pricePerDay / 100).toFixed(0)}</p>
@@ -619,6 +617,21 @@ export default function ListingDetail() {
           book();
         }} 
       />
+
+      {/* Mobile Sticky Booking Bar */}
+      {!isOwner && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 px-4 py-3 shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.1)]" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total</p>
+              <p className="text-xl font-bold text-brand-700">Rs {totalCost > 0 ? (totalCost / 100).toFixed(0) : (listing.pricePerDay / 100).toFixed(0)}<span className="text-xs text-slate-400 font-normal">/day</span></p>
+            </div>
+            <Button variant="primary" onClick={book} className="!px-6 !py-3 !text-sm">
+              Book Now
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

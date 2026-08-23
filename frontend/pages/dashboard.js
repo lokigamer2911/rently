@@ -15,21 +15,21 @@ export default function Dashboard() {
   if (!stats) return <div className="py-20 text-center animate-pulse">Loading your business metrics...</div>;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10 mobile-nav-spacer">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
         <div>
-          <p className="eyebrow mb-3">Host Command Center</p>
-          <h1 className="section-title text-5xl">Welcome back, {user.name?.split(' ')[0]}</h1>
-          <p className="section-copy mt-4">Monitor your rental performance and manage your growing inventory.</p>
+          <p className="eyebrow mb-2 sm:mb-3">Host Command Center</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>Welcome back, {user.name?.split(' ')[0]}</h1>
+          <p className="section-copy mt-3 sm:mt-4">Monitor your rental performance.</p>
         </div>
-        <Button href="/listings/new" variant="primary" className="!py-4 px-8 shadow-brand flex items-center gap-2">
+        <Button href="/listings/new" variant="primary" className="!py-3 sm:!py-4 !px-5 sm:!px-8 shadow-brand flex items-center gap-2">
           <FiPlus size={20} />
           List New Item
         </Button>
       </header>
 
       {/* Stats Grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
         <TiltCard max={7} className="h-full">
           <div className="surface-card !bg-brand-600 text-white h-full">
             <p className="text-[10px] uppercase tracking-widest font-bold opacity-70">Total Earnings</p>
@@ -84,7 +84,7 @@ export default function Dashboard() {
         </TiltCard>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[1fr_350px]">
+      <div className="grid gap-6 sm:gap-10 lg:grid-cols-[1fr_350px]">
         {/* Main Content: Recent Bookings */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
