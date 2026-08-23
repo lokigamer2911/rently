@@ -584,7 +584,7 @@
   border-color: rgba(148, 163, 184, 0.15);
 }
 
-..dark table th,
+.dark table th,
 .dark table td {
   color: var(--text);
 }
