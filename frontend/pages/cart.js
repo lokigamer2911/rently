@@ -207,7 +207,6 @@ export default function Cart() {
                   value={bookingDates[item.id]?.end || ''}
                   onChange={(e) => handleDateChange(item.id, 'end', e.target.value)}
                 />
-                </div>
                 
                 {item.deposit > 0 && (
                   <div className="mt-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
