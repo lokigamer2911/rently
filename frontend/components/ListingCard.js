@@ -58,16 +58,16 @@ export default function ListingCard({ l }) {
   };
 
   return (
-    <div className="surface-card group flex h-full flex-col overflow-hidden p-0">
+    <div className="surface-card group flex h-full flex-col overflow-hidden p-0 !rounded-xl sm:!rounded-[2.2rem]">
       <Link href={`/listings/${l.id}`} className="relative block overflow-hidden">
         {l.images?.[0] ? (
           <img
             src={l.images[0]}
             alt={l.title}
-            className="h-72 w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+            className="h-52 sm:h-72 w-full object-cover transition duration-700 group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="flex h-72 w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(200,134,67,0.25),transparent_38%),linear-gradient(135deg,#f6efe3,#e8ddd0)] text-sm uppercase tracking-[0.24em] text-slate-500">
+          <div className="flex h-52 sm:h-72 w-full items-center justify-center bg-[radial-gradient(circle_at_top,rgba(200,134,67,0.25),transparent_38%),linear-gradient(135deg,#f6efe3,#e8ddd0)] text-sm uppercase tracking-[0.24em] text-slate-500">
             No preview yet
           </div>
         )}
@@ -87,7 +87,7 @@ export default function ListingCard({ l }) {
         </div>
       </Link>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-3 text-xs uppercase tracking-[0.2em] text-slate-400">
           <span>{l.owner?.name || 'Verified host'}</span>
           <span className="inline-flex items-center gap-1 text-accent-500">
@@ -98,7 +98,7 @@ export default function ListingCard({ l }) {
 
         <Link href={`/listings/${l.id}`} className="flex flex-1 flex-col">
           <div className="flex items-start justify-between gap-4">
-            <h3 className="text-2xl text-slate-900">{l.title}</h3>
+            <h3 className="text-lg sm:text-2xl text-slate-900">{l.title}</h3>
             <FiArrowUpRight className="mt-1 shrink-0 text-slate-400 transition group-hover:text-brand-600" />
           </div>
 
@@ -111,9 +111,9 @@ export default function ListingCard({ l }) {
           <div>
             <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-400">
               <FiShield size={10} className="text-brand-600" />
-              Price Per Day
+              Per Day
             </div>
-            <p className="mt-1 text-2xl font-semibold text-brand-700">Rs {(l.pricePerDay / 100).toFixed(0)}</p>
+            <p className="mt-1 text-xl sm:text-2xl font-semibold text-brand-700">Rs {(l.pricePerDay / 100).toFixed(0)}</p>
           </div>
 
           {user && (user.id === l.ownerId || user.id === l.owner?.id) ? (

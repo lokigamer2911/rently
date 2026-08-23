@@ -81,7 +81,7 @@ export default function Conversation() {
   const otherUser = thread.userAId === user.id ? thread.userB : thread.userA;
 
   return (
-    <div className="max-w-2xl mx-auto h-[calc(100vh-180px)] flex flex-col">
+    <div className="max-w-2xl mx-auto h-[calc(100vh-140px)] md:h-[calc(100vh-180px)] flex flex-col">
       {/* Chat Header */}
       <div className="surface-card !p-4 flex items-center justify-between shadow-lg z-10">
         <div className="flex items-center gap-3">
@@ -111,7 +111,7 @@ export default function Conversation() {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 scroll-smooth">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4 scroll-smooth">
         <div className="text-center py-4">
            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] bg-slate-50 px-3 py-1 rounded-full">Conversation Started</span>
         </div>

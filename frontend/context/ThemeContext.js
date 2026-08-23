@@ -9,9 +9,8 @@ export function ThemeProvider({ children }) {
     const saved = localStorage.getItem('rently-theme');
     if (saved) {
       setTheme(saved);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
     }
+    // Default to light mode — only toggle manually via the navbar button
   }, []);
 
   useEffect(() => {

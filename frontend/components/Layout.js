@@ -143,7 +143,7 @@ export default function Layout({ children }) {
       </footer>
 
       <Toaster
-        position="top-right"
+        position="top-center"
         toastOptions={{
           duration: 2600,
           style: {

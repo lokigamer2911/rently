@@ -165,6 +165,7 @@
 
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold;
+    min-height: 44px;
     border: 1px solid transparent;
     transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
   }
@@ -219,7 +220,8 @@
   }
 
   .input {
-    @apply w-full rounded-[1.35rem] px-4 py-3 text-sm outline-none transition;
+    @apply w-full rounded-[1rem] px-4 py-3 text-sm outline-none transition sm:rounded-[1.35rem];
+    min-height: 44px;
     color: var(--text);
     background: rgba(255, 253, 249, 0.92);
     border: 1px solid rgba(37, 52, 42, 0.12);
@@ -236,21 +238,23 @@
 
   .card,
   .surface-card {
-    @apply rounded-[2.2rem] p-7 transition-all duration-500;
+    @apply rounded-[1.5rem] p-5 sm:rounded-[2.2rem] sm:p-7 transition-all duration-500;
     background: rgba(255, 255, 255, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.6);
     box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05);
     backdrop-filter: blur(24px);
   }
 
-  .surface-card:hover {
-    transform: translateY(-8px) scale(1.01);
-    border-color: rgba(255, 255, 255, 1);
-    box-shadow: 0 35px 60px -15px rgba(15, 23, 42, 0.15);
+  @media (hover: hover) and (pointer: fine) {
+    .surface-card:hover {
+      transform: translateY(-8px) scale(1.01);
+      border-color: rgba(255, 255, 255, 1);
+      box-shadow: 0 35px 60px -15px rgba(15, 23, 42, 0.15);
+    }
   }
 
   .hero-panel {
-    @apply relative overflow-hidden rounded-[2.3rem] p-7 md:p-10;
+    @apply relative overflow-hidden rounded-[1.5rem] p-5 sm:rounded-[2.3rem] sm:p-7 md:p-10;
     background: linear-gradient(120deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.85));
     border: 1px solid rgba(255, 255, 255, 0.5);
     box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.9);
@@ -282,19 +286,29 @@
   }
 
   .eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em];
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] sm:text-[11px] font-semibold uppercase tracking-[0.2em] sm:tracking-[0.32em];
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
     color: var(--brand);
     background: rgba(255, 252, 246, 0.8);
     border: 1px solid rgba(37, 52, 42, 0.09);
   }
 
   .section-title {
-    @apply text-4xl leading-tight md:text-5xl;
+    @apply text-[1.65rem] leading-tight sm:text-3xl md:text-4xl lg:text-5xl;
     color: var(--text);
   }
 
+  /* Mobile-first responsive heading for pages that use inline text-5xl */
+  .page-heading {
+    @apply text-2xl leading-tight sm:text-3xl md:text-4xl lg:text-5xl font-bold;
+    color: var(--text);
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+  }
+
   .section-copy {
-    @apply text-base leading-7 md:text-lg;
+    @apply text-[0.875rem] leading-6 sm:text-base md:text-lg;
     color: var(--muted);
   }
 
@@ -474,6 +488,67 @@
   }
 }
 
+/* ---- Mobile-First Utilities ---- */
+
+/* Bottom nav spacer — adds padding so content isn't hidden behind fixed bottom nav */
+.mobile-nav-spacer {
+  padding-bottom: 5.5rem;
+}
+
+@media (min-width: 768px) {
+  .mobile-nav-spacer {
+    padding-bottom: 0;
+  }
+}
+
+/* Safe area for devices with home indicator (iPhone X+) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-nav-spacer {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Mobile-optimized card grid — 1 column on mobile, 2 on tablet, 3 on desktop */
+.catalog-grid {
+  @apply grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 xl:grid-cols-3;
+}
+
+/* Hide scrollbar on mobile for horizontal scroll areas */
+.hide-scrollbar-mobile::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar-mobile {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mobile-optimized page padding */
+.page-padding {
+  @apply px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10;
+}
+
+/* Touch-friendly list items — minimum 48px tap target */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Mobile card — tighter padding, less border radius */
+@media (max-width: 639px) {
+  .surface-card {
+    border-radius: 1.25rem;
+    padding: 1rem;
+  }
+  .hero-panel {
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+  }
+  .mini-stat {
+    border-radius: 1rem;
+    padding: 1rem;
+  }
+}
+
 /* ---- Dark Mode ---- */
 .dark {
   --bg: #0f172a;
@@ -584,7 +659,7 @@
   border-color: rgba(148, 163, 184, 0.15);
 }
 
-..dark table th,
+.dark table th,
 .dark table td {
   color: var(--text);
 }

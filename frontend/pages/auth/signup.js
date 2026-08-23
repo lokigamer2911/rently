@@ -71,8 +71,8 @@ export default function Signup() {
   };
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-      <div className="surface-card flex flex-col justify-between bg-[linear-gradient(145deg,rgba(36,60,45,0.95),rgba(20,31,24,0.96))] text-white">
+    <section className="grid gap-4 sm:gap-6 lg:grid-cols-[0.9fr_1.1fr] mobile-nav-spacer">
+      <div className="surface-card hidden lg:flex flex-col justify-between bg-[linear-gradient(145deg,rgba(36,60,45,0.95),rgba(20,31,24,0.96))] text-white">
         <div>
           <p className="eyebrow mb-5 !border-white/10 !bg-white/10 !text-white">
             <FiZap size={14} />

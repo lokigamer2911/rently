@@ -27,7 +27,7 @@ export default function Favorites() {
   }
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-5 sm:space-y-8 max-w-6xl mx-auto mobile-nav-spacer">
       <div className="flex items-center justify-between">
         <Link href="/listings" className="btn-ghost">
           <FiArrowLeft size={16} />

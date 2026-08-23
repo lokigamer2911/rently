@@ -178,8 +178,8 @@ export default function Login() {
   };
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="hero-panel flex flex-col justify-between">
+    <section className="grid gap-4 sm:gap-6 lg:grid-cols-[0.95fr_1.05fr] mobile-nav-spacer">
+      <div className="hero-panel hidden lg:flex flex-col justify-between">
         <div>
           <p className="eyebrow mb-5">
             <FiZap size={14} />

@@ -127,22 +127,22 @@ export default function Listings() {
   return (
     <div className="space-y-10">
       {/* Search Header */}
-      <section className="hero-panel !pb-12 !overflow-visible">
-        <div className="max-w-3xl mx-auto text-center mb-10">
-          <p className="eyebrow mx-auto mb-5">Premium Marketplace</p>
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-slate-900">
+      <section className="hero-panel !pb-6 sm:!pb-12 !overflow-visible">
+        <div className="max-w-3xl mx-auto text-center mb-6 sm:mb-10">
+          <p className="eyebrow mx-auto mb-3 sm:mb-5">Premium Marketplace</p>
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900">
             Find gear that <span className="text-brand-600 italic">performs.</span>
           </h1>
-          <p className="mt-6 text-lg text-slate-500 leading-relaxed">
-            Search 1000+ rental items from verified local owners. From cinema kits to camping essentials.
+          <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-slate-500 leading-relaxed">
+            Search rental items from verified local owners.
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto surface-card !p-3 flex flex-col md:flex-row gap-2 shadow-2xl">
+        <div className="max-w-4xl mx-auto surface-card !p-2 sm:!p-3 flex flex-col sm:flex-row gap-2 shadow-2xl mobile-nav-spacer">
           <div className="flex-1 relative">
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
-              className="input !border-none !bg-transparent !pl-12 !h-14 !text-lg"
+              className="input !border-none !bg-transparent !pl-10 sm:!pl-12 !h-12 sm:!h-14 text-sm sm:text-lg"
               placeholder="What are you looking for?"
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -152,7 +152,7 @@ export default function Listings() {
           <div className="flex-1 relative" ref={suggestionRef}>
             <FiMapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
             <input 
-              className="input !border-none !bg-transparent !pl-12 !h-14 !text-lg"
+              className="input !border-none !bg-transparent !pl-10 sm:!pl-12 !h-12 sm:!h-14 text-sm sm:text-lg"
               placeholder="In which city?"
               value={city}
               onChange={(e) => {
@@ -197,14 +197,14 @@ export default function Listings() {
               </div>
             )}
           </div>
-          <Button variant="primary" className="!h-14 !px-8 text-lg shadow-brand">
+          <Button variant="primary" className="!h-12 sm:!h-14 !px-6 sm:!px-8 text-sm sm:text-lg shadow-brand">
             Search
           </Button>
         </div>
       </section>
 
       {/* Main Grid with Sidebar */}
-      <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
+      <div className="grid gap-6 sm:gap-10 lg:grid-cols-[280px_1fr]">
         {/* Sidebar Filters */}
         <aside className="space-y-8 hidden lg:block">
           <div>

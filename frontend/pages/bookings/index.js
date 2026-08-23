@@ -61,15 +61,15 @@ export default function Bookings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-5 sm:space-y-8 mobile-nav-spacer">
       <header>
-        <p className="eyebrow mb-3">Rental Management</p>
-        <h1 className="section-title text-5xl">Your Bookings</h1>
-        <p className="section-copy mt-4">Track your gear rentals, confirm requests, and download official agreements.</p>
+        <p className="eyebrow mb-2 sm:mb-3">Rental Management</p>
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>Your Bookings</h1>
+        <p className="section-copy mt-3 sm:mt-4">Track your rentals, confirm requests, and download agreements.</p>
       </header>
 
       {/* Tabs */}
-      <div className="flex p-1.5 bg-slate-100 rounded-2xl w-fit">
+      <div className="flex p-1 sm:p-1.5 bg-slate-100 rounded-xl sm:rounded-2xl w-full sm:w-fit">
         <Button 
           variant={tab === 'mine' ? 'primary' : 'ghost'}
           onClick={() => setTab('mine')} 
@@ -89,7 +89,7 @@ export default function Bookings() {
       <div className="space-y-4">
         {list?.length > 0 ? (
           list.map(b => (
-            <div key={b.id} className="surface-card !p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-brand-100 transition-colors border-2 border-slate-50">
+            <div key={b.id} className="surface-card !p-4 sm:!p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 hover:border-brand-100 transition-colors border-2 border-slate-50">
               <div className="flex items-center gap-5">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden border border-slate-100 bg-slate-50">
                    {b.listing.images?.[0] ? (
@@ -110,7 +110,7 @@ export default function Bookings() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {/* Status Badge */}
                 <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full ${
                   b.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-700' : 

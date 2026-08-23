@@ -170,41 +170,43 @@ export default function Cart() {
   return (
     <>
       <script src="https://checkout.razorpay.com/v1/checkout.js" async />
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Your Cart</h1>
-        <div className="space-y-4">
+      <div className="max-w-4xl mx-auto mobile-nav-spacer">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Your Cart</h1>
+        <div className="space-y-3 sm:space-y-4">
           {cart.map((item) => (
-            <div key={item.id} className="card flex items-center gap-4">
-              {item.images?.[0] ? (
-                <img src={item.images[0]} alt={item.title} className="w-20 h-20 object-cover rounded-lg" />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-500">
-                  No image
-                </div>
-              )}
-              <div className="flex-1">
-                <h3 className="font-semibold">{item.title}</h3>
-                {user && (user.id === item.ownerId || user.id === item.owner?.id) ? (
-                  <p className="text-red-500 text-xs font-bold mt-1 uppercase tracking-wider">This is your own listing</p>
+            <div key={item.id} className="card flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-center gap-3">
+                {item.images?.[0] ? (
+                  <img src={item.images[0]} alt={item.title} className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg shrink-0" />
                 ) : (
-                  <p className="text-slate-600">Rs {(item.pricePerDay / 100).toFixed(0)} Price Per Day</p>
+                  <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-500 shrink-0">
+                    No image
+                  </div>
                 )}
-                <div className="flex gap-2 mt-2">
-                  <input
-                    type="datetime-local"
-                    className="input text-sm"
-                    min={todayTime}
-                    value={bookingDates[item.id]?.start || ''}
-                    onChange={(e) => handleDateChange(item.id, 'start', e.target.value)}
-                  />
-                  <input
-                    type="datetime-local"
-                    className="input text-sm"
-                    min={bookingDates[item.id]?.start || todayTime}
-                    value={bookingDates[item.id]?.end || ''}
-                    onChange={(e) => handleDateChange(item.id, 'end', e.target.value)}
-                  />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base truncate">{item.title}</h3>
+                  {user && (user.id === item.ownerId || user.id === item.owner?.id) ? (
+                    <p className="text-red-500 text-[10px] font-bold mt-1 uppercase tracking-wider">Your listing</p>
+                  ) : (
+                    <p className="text-slate-600 text-xs sm:text-sm">Rs {(item.pricePerDay / 100).toFixed(0)}/day</p>
+                  )}
                 </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:flex-1">
+                <input
+                  type="datetime-local"
+                  className="input text-xs sm:text-sm"
+                  min={todayTime}
+                  value={bookingDates[item.id]?.start || ''}
+                  onChange={(e) => handleDateChange(item.id, 'start', e.target.value)}
+                />
+                <input
+                  type="datetime-local"
+                  className="input text-xs sm:text-sm"
+                  min={bookingDates[item.id]?.start || todayTime}
+                  value={bookingDates[item.id]?.end || ''}
+                  onChange={(e) => handleDateChange(item.id, 'end', e.target.value)}
+                />
                 
                 {item.deposit > 0 && (
                   <div className="mt-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50">

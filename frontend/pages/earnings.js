@@ -46,16 +46,16 @@ export default function EarningsDashboard() {
   const { summary, chartData, topItems } = earnings;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10 pb-20">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10 pb-16 sm:pb-20 mobile-nav-spacer">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
         <div>
-          <Link href="/dashboard" className="btn-ghost !p-0 mb-4 inline-flex items-center gap-2 text-slate-400 hover:text-slate-600">
+          <Link href="/dashboard" className="btn-ghost !p-0 mb-3 sm:mb-4 inline-flex items-center gap-2 text-slate-400 hover:text-slate-600">
             <FiArrowLeft size={16} />
             Back to Command Center
           </Link>
-          <p className="eyebrow mb-3">Revenue Analytics</p>
-          <h1 className="section-title text-5xl">Earnings Dashboard</h1>
-          <p className="section-copy mt-4">Deep insights into your rental business and revenue performance.</p>
+          <p className="eyebrow mb-2 sm:mb-3">Revenue Analytics</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>Earnings Dashboard</h1>
+          <p className="section-copy mt-3 sm:mt-4">Revenue insights and performance metrics.</p>
         </div>
         <div className="flex gap-3">
           <div className="surface-card !py-3 !px-5 flex items-center gap-3 border border-emerald-100 bg-emerald-50/30">
@@ -66,7 +66,7 @@ export default function EarningsDashboard() {
       </header>
 
       {/* Main Stats */}
-      <div className="grid gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
         <TiltCard max={7} className="h-full">
           <div className="surface-card !bg-brand-700 text-white shadow-brand-lg relative overflow-hidden h-full">
             <div className="absolute -right-4 -top-4 opacity-10">
