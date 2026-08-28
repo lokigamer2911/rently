@@ -1,4 +1,5 @@
 const { sendEmail } = require('./messaging');
+const { escapeHtml } = require('./sanitize');
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
@@ -126,16 +127,6 @@ async function sendDisputeNotificationEmail(email, name, dispute) {
       </div>
     `,
   });
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 module.exports = {

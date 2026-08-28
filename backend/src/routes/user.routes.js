@@ -15,7 +15,8 @@ router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: 'Not found' });
-    const { passwordHash: _passwordHash, ...rest } = user;
+    // SECURITY: Exclude sensitive fields from response
+    const { passwordHash: _1, refreshToken: _2, bankAccountNumber: _3, bankIfsc: _4, bankName: _5, firebaseUid: _6, failedLoginAttempts: _7, lockedUntil: _8, emailVerifyToken: _9, emailVerifyExpires: _10, passwordResetToken: _11, passwordResetExpires: _12, lastLoginIp: _13, ...rest } = user;
     res.json(rest);
   } catch (e) { next(e); }
 });
@@ -31,13 +32,8 @@ router.patch('/me', requireAuth, async (req, res, next) => {
       bankName: z.string().max(100).optional(),
     }).parse(req.body);
     const user = await prisma.user.update({ where: { id: req.user.id }, data });
-    // Only update bank fields if provided
-    const bankData = {};
-    if (data.bankAccountNumber !== undefined) bankData.bankAccountNumber = data.bankAccountNumber;
-    if (data.bankIfsc !== undefined) bankData.bankIfsc = data.bankIfsc;
-    if (data.bankName !== undefined) bankData.bankName = data.bankName;
-
-    const { passwordHash: _passwordHash, ...rest } = user;
+    // SECURITY: Exclude sensitive fields from response
+    const { passwordHash: _1, refreshToken: _2, bankAccountNumber: _3, bankIfsc: _4, bankName: _5, firebaseUid: _6, ...rest } = user;
     res.json(rest);
   } catch (e) { next(e); }
 });
@@ -57,7 +53,8 @@ router.post('/verify', requireAuth, async (req, res, next) => {
       }
     });
 
-    const { passwordHash: _passwordHash, ...rest } = user;
+    // SECURITY: Exclude sensitive fields from response
+    const { passwordHash: _1, refreshToken: _2, bankAccountNumber: _3, bankIfsc: _4, bankName: _5, firebaseUid: _6, ...rest } = user;
     res.json({ message: 'Identity verified successfully', user: rest });
   } catch (e) { next(e); }
 });

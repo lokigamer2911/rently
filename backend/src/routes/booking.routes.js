@@ -165,7 +165,9 @@ router.post('/', requireAuth, async (req, res, next) => {
       link: '/bookings',
     });
 
-    res.json(booking);
+    // SECURITY: Don't expose OTPs in HTTP response — they're sent via notification only
+    const { handoverOTP: _h, returnOTP: _r, ...bookingSafe } = booking;
+    res.json(bookingSafe);
   } catch (e) { next(e); }
 });
 router.get('/mine', requireAuth, async (req, res, next) => {
@@ -173,7 +175,7 @@ router.get('/mine', requireAuth, async (req, res, next) => {
     const bookings = await prisma.booking.findMany({
       where: { renterId: req.user.id },
       include: { 
-        listing: { include: { owner: { select: { name: true, email: true, phone: true } } } }, 
+        listing: { include: { owner: { select: { name: true, avatarUrl: true } } } }, 
         payment: true 
       },
       orderBy: { createdAt: 'desc' },
@@ -184,11 +186,10 @@ router.get('/mine', requireAuth, async (req, res, next) => {
 
 router.get('/incoming', requireAuth, async (req, res, next) => {
   try {
-    const bookings = await prisma.booking.findMany({
-      where: { listing: { ownerId: req.user.id } },
+    const bookings = await prisma.booking.findMany({      where: { listing: { ownerId: req.user.id } },
       include: { 
-        listing: { include: { owner: { select: { name: true, email: true, phone: true } } } }, 
-        renter: { select: { id: true, name: true, avatarUrl: true, email: true, phone: true } }, 
+        listing: { include: { owner: { select: { name: true, avatarUrl: true } } } }, 
+        renter: { select: { id: true, name: true, avatarUrl: true } },
         payment: true 
       },
       orderBy: { createdAt: 'desc' },

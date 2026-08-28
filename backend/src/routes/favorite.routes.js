@@ -2,6 +2,14 @@ const router = require('express').Router();
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 
+const CUID_RE = /^c[a-z0-9]{20,}$/i;
+function validateId(req, res, next) {
+  if (!CUID_RE.test(req.params.listingId)) {
+    return res.status(400).json({ error: 'Invalid listing ID format' });
+  }
+  next();
+}
+
 // Get all favorites for current user
 router.get('/', requireAuth, async (req, res, next) => {
   try {
@@ -39,7 +47,7 @@ router.get('/', requireAuth, async (req, res, next) => {
 });
 
 // Check if a listing is favorited by current user
-router.get('/check/:listingId', requireAuth, async (req, res, next) => {
+router.get('/check/:listingId', requireAuth, validateId, async (req, res, next) => {
   try {
     const favorite = await prisma.favorite.findUnique({
       where: { userId_listingId: { userId: req.user.id, listingId: req.params.listingId } },
@@ -49,7 +57,7 @@ router.get('/check/:listingId', requireAuth, async (req, res, next) => {
 });
 
 // Toggle favorite (add if not exists, remove if exists)
-router.post('/toggle/:listingId', requireAuth, async (req, res, next) => {
+router.post('/toggle/:listingId', requireAuth, validateId, async (req, res, next) => {
   try {
     const { listingId } = req.params;
 
