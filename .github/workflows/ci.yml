@@ -18,22 +18,22 @@ jobs:
     name: "🔒 Dependency Audit"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20.x'
 
       # Cache node_modules for faster runs
       - name: Cache backend node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: backend/node_modules
           key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
 
       - name: Cache frontend node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/node_modules
           key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
@@ -83,21 +83,21 @@ jobs:
     # For PRs, Snyk GitHub App is better (comments directly on PR)
     if: github.event_name == 'push'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20.x'
 
       - name: Cache backend node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: backend/node_modules
           key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
 
       - name: Cache frontend node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/node_modules
           key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
@@ -150,15 +150,15 @@ jobs:
     name: "🔍 Lint & Code Quality"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20.x'
 
       - name: Cache backend node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: backend/node_modules
           key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
@@ -189,27 +189,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: [security-audit, lint]  # Only build if security & lint pass
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20.x'
 
       - name: Cache backend node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: backend/node_modules
           key: backend-${{ runner.os }}-${{ hashFiles('backend/package-lock.json', 'backend/package.json') }}
 
       - name: Cache frontend node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/node_modules
           key: frontend-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/package.json') }}
 
       - name: Cache frontend .next
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: frontend/.next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
@@ -241,7 +241,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Post Security Summary to PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const security = '${{ needs.security-audit.result }}' === 'success' ? '✅' : '❌';
