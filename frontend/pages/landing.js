@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fi';
 import Button from '../components/Button';
 import TiltCard from '../components/TiltCard';
+import WebGLErrorBoundary from '../components/WebGLErrorBoundary';
 
 // Dynamically load client-side WebGL elements to prevent hydration issues
 const Hero3D = dynamic(() => import('../components/three/Hero3D'), {
@@ -190,7 +191,9 @@ const LandingPage = () => {
 
             {/* Right 3D Stage — hidden on very small screens, shown on sm+ */}
             <div className="hidden sm:block lg:col-span-7 relative h-[40vh] lg:h-[75vh] w-full">
-              <Hero3D className="w-full h-full" />
+              <WebGLErrorBoundary>
+                <Hero3D className="w-full h-full" />
+              </WebGLErrorBoundary>
             </div>
           </div>
         </div>
@@ -226,7 +229,9 @@ const LandingPage = () => {
                   className="h-full p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white/70 border border-slate-200/50 hover:border-blue-500/20 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 space-y-4 sm:space-y-6 backdrop-blur-md"
                 >
                   <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center">
-                    <Feature3DIcon type={feature.type} hovered={hoveredFeature === idx} />
+                    <WebGLErrorBoundary fallback={<div className="w-full h-full rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center text-lg">✨</div>}>
+                      <Feature3DIcon type={feature.type} hovered={hoveredFeature === idx} />
+                    </WebGLErrorBoundary>
                   </div>
                   <h3 className="text-lg sm:text-xl font-bold text-slate-800 mb-1 sm:mb-2">{feature.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">{feature.description}</p>
@@ -287,7 +292,9 @@ const LandingPage = () => {
 
             {/* 3D Showcase — hidden on mobile, shown on lg+ */}
             <div className="hidden lg:block lg:col-span-6">
-              <Process3DShowcase activeStep={previewStep} />
+              <WebGLErrorBoundary fallback={<div className="w-full h-80 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/50"><p className="text-sm text-slate-400">Interactive demo unavailable</p></div>}>
+                <Process3DShowcase activeStep={previewStep} />
+              </WebGLErrorBoundary>
             </div>
           </div>
         </div>
@@ -338,7 +345,9 @@ const LandingPage = () => {
 
             {/* 3D Chart — hidden on mobile, shown on lg+ */}
             <div className="hidden lg:block lg:col-span-6 w-full">
-              <Earnings3DChart />
+              <WebGLErrorBoundary fallback={<div className="w-full h-96 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/50"><p className="text-sm text-slate-400">Earnings chart unavailable</p></div>}>
+                <Earnings3DChart />
+              </WebGLErrorBoundary>
             </div>
           </div>
         </div>
