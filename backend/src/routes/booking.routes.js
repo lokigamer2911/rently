@@ -91,13 +91,10 @@ router.post('/', requireAuth, async (req, res, next) => {
     if (!listing || !listing.available) return res.status(400).json({ error: 'Unavailable' });
     if (listing.ownerId === req.user.id) return res.status(400).json({ error: 'You cannot book your own listing' });
 
-    // KYC verification is temporarily disabled for all users.
-    // Booking creation remains available without blocking the flow.
-
-    // Conflict check (Bookings)
+    // Conflict check (Bookings) — includes PICKED_UP to prevent double-booking
     const overlap = await prisma.booking.findFirst({
       where: {
-        listingId, status: { in: ['PENDING', 'CONFIRMED'] },
+        listingId, status: { in: ['PENDING', 'CONFIRMED', 'PICKED_UP'] },
         AND: [{ startDate: { lt: end } }, { endDate: { gt: start } }],
       },
     });
@@ -115,15 +112,13 @@ router.post('/', requireAuth, async (req, res, next) => {
 
     const days = Math.ceil((end - start) / 86400000);
     const rentalAmount = days * listing.pricePerDay;
-    const serviceFee = Math.round(rentalAmount * 0.05); // 5% Service Fee
-
-    // Only add cash deposit to totalAmount if renter chose CASH
+    const serviceFee = Math.round(rentalAmount * 0.05);
     const depositAmount = depositType === 'CASH' ? listing.deposit : 0;
     const totalAmount = rentalAmount + serviceFee + depositAmount;
-
-    // Generate 6-digit OTP for handover (cryptographically secure)
     const handoverOTP = generateOTP();
 
+    // Create booking — race condition window is small (between overlap check and create).
+    // For higher scale, use SELECT FOR UPDATE or a DB-level unique constraint on date ranges.
     const booking = await prisma.booking.create({
       data: {
         listingId,
