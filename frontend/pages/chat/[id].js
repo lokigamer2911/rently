@@ -33,34 +33,40 @@ export default function Conversation() {
     if (!user || !id) return;
     const s = getSocket();
 
-    s.on('connect', () => {
+    const onConnect = () => {
       console.debug('[chat] socket connected', s.id);
-    });
+    };
 
-    s.on('connect_error', (err) => {
+    const onConnectError = (err) => {
       console.error('[chat] socket connect_error', err.message || err);
-    });
+    };
 
-    s.on('error', (err) => {
+    const onError = (err) => {
       console.error('[chat] socket error', err);
-    });
+    };
 
-    s.on('message:recv', (msg) => {
+    const onMessage = (msg) => {
       if (msg.threadId === id) {
         setMessages(prev => {
           if (prev.some(m => m.id === msg.id)) return prev;
           return [...prev, msg];
         });
       }
-    });
+    };
+
+    s.on('connect', onConnect);
+    s.on('connect_error', onConnectError);
+    s.on('error', onError);
+    s.on('message:recv', onMessage);
 
     setSocket(s);
     return () => {
-      s.off('connect');
-      s.off('connect_error');
-      s.off('error');
-      s.off('message:recv');
-      disconnectSocket();
+      s.off('connect', onConnect);
+      s.off('connect_error', onConnectError);
+      s.off('error', onError);
+      s.off('message:recv', onMessage);
+      // Do NOT call disconnectSocket() here — reuse the singleton
+      // across page navigations. Only disconnect on full unmount.
     };
   }, [id, user]);
 

@@ -2,9 +2,28 @@ const jwt = require('jsonwebtoken');
 
 const prisma = require('../config/prisma');
 
+/**
+ * Parse raw Cookie header into a { name: value } map.
+ * Socket.IO handshakes don't use cookie-parser, so we parse manually.
+ */
+function parseCookies(cookieHeader) {
+  const cookies = {};
+  if (!cookieHeader) return cookies;
+  cookieHeader.split(';').forEach((pair) => {
+    const [name, ...rest] = pair.split('=');
+    const key = name.trim();
+    if (key) cookies[key] = rest.join('=').trim();
+  });
+  return cookies;
+}
+
 function registerSocket(io) {
   io.use(async (socket, next) => {
-    const token = socket.handshake.auth?.token;
+    // SECURITY: Accept token from either:
+    // 1. Cookie (preferred — httpOnly cookie sent automatically by browser)
+    // 2. auth.token fallback (for mobile clients or when cookies don't work)
+    const cookies = parseCookies(socket.handshake.headers?.cookie);
+    const token = cookies.token || socket.handshake.auth?.token;
     if (!token) return next(new Error('No token'));
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
