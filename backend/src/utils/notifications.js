@@ -1,24 +1,6 @@
 const prisma = require('../config/prisma');
 const { sendEmail, sendSMS } = require('./messaging');
-
-/** Escape HTML special characters to prevent XSS/injection in email templates */
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-/** Validate and sanitize a URL to prevent javascript: and data: URI attacks */
-function safeUrl(base, path) {
-  if (!path || typeof path !== 'string') return null;
-  // Only allow paths starting with / to prevent open redirect
-  if (!path.startsWith('/')) return null;
-  return `${base}${path}`;
-}
+const { escapeHtml, safeUrl } = require('./sanitize');
 
 const createNotification = async (io, { userId, type, title, body, link }) => {
   try {

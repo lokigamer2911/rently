@@ -105,7 +105,7 @@ app.use(
     },
   })
 );
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 // CSRF protection (production only, state-changing methods)
@@ -116,8 +116,8 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
-app.use('/api/listings', listingRoutes);
 app.use('/api/listings/ai-suggest', aiLimiter);
+app.use('/api/listings', listingRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/upload', uploadRoutes);

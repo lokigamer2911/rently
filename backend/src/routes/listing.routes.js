@@ -320,6 +320,9 @@ router.get('/:id', validateId, async (req, res, next) => {
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     const data = ListingInput.parse(req.body);
+    // SECURITY: Verify categoryId exists to prevent FK violations and data corruption
+    const category = await prisma.category.findUnique({ where: { id: data.categoryId } });
+    if (!category) return res.status(400).json({ error: 'Invalid category ID' });
     const listing = await prisma.listing.create({
       data: { 
         ...data, 
@@ -455,10 +458,10 @@ Generate a JSON object containing details for this rental listing. The JSON obje
 Return ONLY a raw JSON object. Do not wrap it in markdown code blocks like \`\`\`json.`;
 
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
               generationConfig: { responseMimeType: 'application/json' }

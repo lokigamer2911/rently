@@ -109,7 +109,7 @@ jobs:
         run: cd frontend && npm install --legacy-peer-deps --ignore-scripts --no-audit
 
       # Snyk test: scans for vulnerabilities and license issues
-      # Uploads results to GitHub Security tab as SARIF
+      # Uses --sarif-file-output for native SARIF upload to GitHub Security tab
       - name: Snyk Backend Test
         uses: snyk/actions/node@master
         continue-on-error: true  # Don't fail CI — report only
@@ -117,7 +117,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --file=backend/package.json --severity-threshold=high --json-file-output=snyk-backend.json
+          args: --file=backend/package.json --severity-threshold=high --sarif-file-output=snyk-backend.sarif
 
       - name: Snyk Frontend Test
         uses: snyk/actions/node@master
@@ -126,14 +126,22 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --file=frontend/package.json --severity-threshold=high --json-file-output=snyk-frontend.json
+          args: --file=frontend/package.json --severity-threshold=high --sarif-file-output=snyk-frontend.sarif
 
       # Upload SARIF to GitHub Security tab
       - name: Upload Snyk Results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: snyk-backend.json
+          sarif_file: snyk-backend.sarif
+          category: snyk-backend
+
+      - name: Upload Snyk Frontend Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: snyk-frontend.sarif
+          category: snyk-frontend
 
   # ──────────────────────────────────────────────
   # 3. Lint — catch code quality issues early
@@ -207,13 +215,16 @@ jobs:
           key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
       - name: Install Frontend Dependencies
-        run: cd frontend && npm install --legacy-peer-deps --no-audit
+        run: cd frontend && npm install --legacy-peer-deps --ignore-scripts --no-audit
 
       - name: Build Frontend
         run: cd frontend && npm run build
 
       - name: Install Backend Dependencies
-        run: cd backend && npm install --no-audit
+        run: cd backend && npm install --ignore-scripts --no-audit
+
+      - name: Generate Prisma Client
+        run: cd backend && npx prisma generate
 
       - name: Run Backend Tests
         run: cd backend && npm test
