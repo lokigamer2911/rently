@@ -1,5 +1,4 @@
 import { io } from 'socket.io-client';
-import { getStoredAuthToken } from './authToken';
 let socket;
 
 function getSocketUrl() {
@@ -12,11 +11,17 @@ function getSocketUrl() {
   return normalized || window.location.origin;
 }
 
+/**
+ * Get or create the Socket.IO singleton.
+ * Uses withCredentials: true so the browser sends the httpOnly JWT cookie
+ * automatically with the WebSocket handshake — no need to pass the token
+ * in auth, which was broken on page refresh (in-memory token was lost).
+ */
 export function getSocket() {
-  if (!socket && typeof window !== 'undefined') {
+  if (!socket || !socket.connected) {
     const url = getSocketUrl();
     socket = io(url, {
-      auth: { token: getStoredAuthToken() },
+      withCredentials: true,
       autoConnect: true,
       path: '/socket.io',
       transports: ['websocket', 'polling'],
@@ -27,6 +32,7 @@ export function getSocket() {
 
 export function disconnectSocket() {
   if (socket) {
+    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
   }
