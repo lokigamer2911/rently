@@ -111,7 +111,36 @@ app.use(cookieParser());
 // CSRF protection (production only, state-changing methods)
 app.use(csrfProtection);
 
-app.get('/health', (_, res) => res.json({ ok: true }));
+app.get('/health', async (_, res) => {
+  const checks = {};
+  const start = Date.now();
+
+  // 1. Database connectivity
+  try {
+    const prisma = require('./config/prisma');
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = { status: 'ok', ms: Date.now() - start };
+  } catch (e) {
+    checks.database = { status: 'error', message: e.message };
+  }
+
+  // 2. Razorpay configured
+  checks.razorpay = { status: process.env.RAZORPAY_KEY_ID ? 'configured' : 'missing' };
+
+  // 3. Firebase configured
+  checks.firebase = { status: process.env.FIREBASE_PROJECT_ID ? 'configured' : 'missing' };
+
+  // 4. Email service configured
+  checks.email = { status: process.env.SENDGRID_API_KEY ? 'configured' : 'missing' };
+
+  const allOk = checks.database?.status === 'ok';
+  res.status(allOk ? 200 : 503).json({
+    ok: allOk,
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    services: checks,
+  });
+});
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
