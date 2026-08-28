@@ -63,6 +63,15 @@ function setAuthCookies(res, user) {
 // ─── CSRF Token Endpoint ────────────────────────────────────
 router.get('/csrf-token', csrfTokenEndpoint);
 
+// Rate limit Firebase exchange to prevent brute-force token stuffing
+const firebaseLimiter = require('express-rate-limit')({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { error: 'Too many Firebase login attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── Signup ─────────────────────────────────────────────────
 router.post('/signup', async (req, res, next) => {
   try {
@@ -352,7 +361,7 @@ router.post('/reset-password', async (req, res, next) => {
 });
 
 // ─── Firebase Exchange ──────────────────────────────────────
-router.post('/firebase', async (req, res, next) => {
+router.post('/firebase', firebaseLimiter, async (req, res, next) => {
   try {
     const { idToken } = z.object({ idToken: z.string() }).parse(req.body);
     const auth = firebaseAdmin.getAuth();
@@ -360,17 +369,45 @@ router.post('/firebase', async (req, res, next) => {
     const decoded = await auth.verifyIdToken(idToken);
 
     let user = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
+    let linkedBy = null; // Track how the account was found (for audit)
+
     if (!user) {
-      // Try linking by email or phone
+      // SECURITY: Only link by email if the existing account's email is ALREADY verified.
+      // This prevents account takeover: attacker signs up with victim's email (unverified),
+      // then victim logs in via Firebase — the unverified account won't be auto-linked.
       if (decoded.email) {
-        user = await prisma.user.findUnique({ where: { email: decoded.email } });
+        const emailMatch = await prisma.user.findUnique({ where: { email: decoded.email } });
+        if (emailMatch && emailMatch.emailVerified) {
+          user = emailMatch;
+          linkedBy = 'email';
+        }
+        // If email is NOT verified on existing account, do NOT link — create new account below
       }
+      // SECURITY: Only link by phone if verified via Firebase (phone_number is always verified by Firebase)
       if (!user && decoded.phone_number) {
-        user = await prisma.user.findUnique({ where: { phone: decoded.phone_number } });
+        const phoneMatch = await prisma.user.findUnique({ where: { phone: decoded.phone_number } });
+        if (phoneMatch) {
+          user = phoneMatch;
+          linkedBy = 'phone';
+        }
       }
+    } else {
+      linkedBy = 'firebaseUid';
     }
 
     if (user) {
+      // SECURITY: If account already has a different Firebase UID, block the link
+      // This prevents hijacking an account that's already linked to another Google account
+      if (user.firebaseUid && user.firebaseUid !== decoded.uid) {
+        logger.warn(`Firebase link blocked: user ${user.id} already linked to different Firebase UID`, {
+          existingUid: user.firebaseUid,
+          attemptedUid: decoded.uid,
+          email: decoded.email,
+          linkedBy,
+        });
+        return res.status(409).json({ error: 'This email is already associated with a different account. Please log in with your existing method.' });
+      }
+
       // Link Firebase UID if not already linked
       user = await prisma.user.update({
         where: { id: user.id },
@@ -382,6 +419,12 @@ router.post('/firebase', async (req, res, next) => {
           avatarUrl: user.avatarUrl || decoded.picture || null,
           emailVerified: user.emailVerified || !!decoded.email_verified,
         },
+      });
+
+      logger.info(`Firebase account linked: user ${user.id} via ${linkedBy}`, {
+        userId: user.id,
+        linkedBy,
+        email: decoded.email,
       });
     } else {
       // Generate email verification token for new Firebase users
