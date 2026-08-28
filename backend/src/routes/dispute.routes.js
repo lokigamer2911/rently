@@ -24,7 +24,8 @@ const createDisputeSchema = z.object({
 
 const routeErrorHandler = (error, res) => {
   if (error instanceof ZodError) {
-    return res.status(400).json({ error: error.errors });
+    // Zod 4 renamed .errors to .issues
+    return res.status(400).json({ error: error.issues });
   }
   return res.status(500).json({ error: 'Failed to process request' });
 };
