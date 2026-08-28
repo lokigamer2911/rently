@@ -69,78 +69,88 @@ router.get('/user/me', requireAuth, async (req, res, next) => {
 router.get('/earnings/me', requireAuth, async (req, res, next) => {
   try {
     const userId = req.user.id;
-    
-    // 1. Get all confirmed/completed bookings for my listings
-    const bookings = await prisma.booking.findMany({
-      where: {
-        listing: { ownerId: userId },
-        status: { in: ['CONFIRMED', 'PICKED_UP', 'COMPLETED'] }
-      },
-      include: {
-        listing: { select: { id: true, title: true, pricePerDay: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    const activeStatuses = ['CONFIRMED', 'PICKED_UP', 'COMPLETED'];
 
-    // 2. Aggregate stats
-    const totalRevenue = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
-    const completedRevenue = bookings
-      .filter(b => b.status === 'COMPLETED')
-      .reduce((sum, b) => sum + b.totalAmount, 0);
+    // 1. Use DB aggregation instead of loading all bookings into memory
+    const [totalAgg, completedAgg] = await Promise.all([
+      prisma.booking.aggregate({
+        _sum: { totalAmount: true },
+        _count: true,
+        where: { listing: { ownerId: userId }, status: { in: activeStatuses } }
+      }),
+      prisma.booking.aggregate({
+        _sum: { totalAmount: true },
+        where: { listing: { ownerId: userId }, status: 'COMPLETED' }
+      }),
+    ]);
+
+    const totalRevenue = totalAgg._sum.totalAmount || 0;
+    const completedRevenue = completedAgg._sum.totalAmount || 0;
     const pendingRevenue = totalRevenue - completedRevenue;
+    const bookingCount = totalAgg._count || 0;
 
-    // 3. Monthly breakdown (last 6 months)
-    const monthlyData = {};
+    // 2. Monthly breakdown — use groupBy for last 6 months (DB-side)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-    
-    // Initialize months
-    for (let i = 0; i < 6; i++) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const monthKey = d.toLocaleString('default', { month: 'short' });
-      monthlyData[monthKey] = 0;
-    }
+    sixMonthsAgo.setHours(0, 0, 0, 0);
 
-    bookings.forEach(b => {
-      const monthKey = new Date(b.createdAt).toLocaleString('default', { month: 'short' });
-      if (monthlyData[monthKey] !== undefined) {
-        monthlyData[monthKey] += b.totalAmount;
+    const monthlyRows = await prisma.booking.groupBy({
+      by: ['createdAt'],
+      _sum: { totalAmount: true },
+      where: {
+        listing: { ownerId: userId },
+        status: { in: activeStatuses },
+        createdAt: { gte: sixMonthsAgo }
       }
     });
 
-    const chartData = Object.keys(monthlyData).reverse().map(key => ({
+    // Bucket by month
+    const monthlyData = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      monthlyData[d.toLocaleString('default', { month: 'short' })] = 0;
+    }
+    monthlyRows.forEach(row => {
+      const monthKey = new Date(row.createdAt).toLocaleString('default', { month: 'short' });
+      if (monthlyData[monthKey] !== undefined) {
+        monthlyData[monthKey] += row._sum.totalAmount || 0;
+      }
+    });
+
+    const chartData = Object.keys(monthlyData).map(key => ({
       month: key,
       earnings: monthlyData[key] / 100
     }));
 
-    // 4. Performance by item
-    const itemStats = {};
-    bookings.forEach(b => {
-      if (!itemStats[b.listingId]) {
-        itemStats[b.listingId] = {
-          id: b.listingId,
-          title: b.listing.title,
-          revenue: 0,
-          bookings: 0,
-          pricePerDay: b.listing.pricePerDay
-        };
-      }
-      itemStats[b.listingId].revenue += b.totalAmount;
-      itemStats[b.listingId].bookings += 1;
+    // 3. Top items — use groupBy instead of loading all bookings
+    const topItemsRaw = await prisma.booking.groupBy({
+      by: ['listingId'],
+      _sum: { totalAmount: true },
+      _count: true,
+      where: { listing: { ownerId: userId }, status: { in: activeStatuses } },
+      orderBy: { _sum: { totalAmount: 'desc' } },
+      take: 5,
     });
 
-    const topItems = Object.values(itemStats)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+    // Fetch listing titles for the top items
+    const listingIds = topItemsRaw.map(r => r.listingId);
+    const listings = await prisma.listing.findMany({
+      where: { id: { in: listingIds } },
+      select: { id: true, title: true, pricePerDay: true }
+    });
+    const listingMap = Object.fromEntries(listings.map(l => [l.id, l]));
+
+    const topItems = topItemsRaw.map(r => ({
+      id: r.listingId,
+      title: listingMap[r.listingId]?.title || 'Unknown',
+      revenue: r._sum.totalAmount || 0,
+      bookings: r._count,
+      pricePerDay: listingMap[r.listingId]?.pricePerDay || 0,
+    }));
 
     res.json({
-      summary: {
-        totalRevenue,
-        completedRevenue,
-        pendingRevenue,
-        bookingCount: bookings.length
-      },
+      summary: { totalRevenue, completedRevenue, pendingRevenue, bookingCount },
       chartData,
       topItems
     });
@@ -384,7 +394,7 @@ router.get('/:id/availability', validateId, async (req, res, next) => {
       select: { blockedDates: true },
     });
     const bookings = await prisma.booking.findMany({
-      where: { listingId: req.params.id, status: { in: ['PENDING', 'CONFIRMED'] } },
+      where: { listingId: req.params.id, status: { in: ['PENDING', 'CONFIRMED', 'PICKED_UP'] } },
       select: { startDate: true, endDate: true },
     });
     res.json({
