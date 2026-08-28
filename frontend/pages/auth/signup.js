@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { FiArrowRight, FiShield, FiZap } from 'react-icons/fi';
 import { api } from '../../lib/api';
-import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth, firebaseInitError } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
@@ -53,17 +53,21 @@ export default function Signup() {
 
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
       await updateProfile(cred.user, { displayName: form.name });
-      // Send Firebase verification email (non-blocking)
-      sendEmailVerification(cred.user).catch(err => {
-        console.error('Failed to send verification email:', err);
-      });
+      // Backend sends verification email via /auth/firebase exchange — no need to send a duplicate
       const idToken = await cred.user.getIdToken();
       const { data } = await api.post('/auth/firebase', { idToken });
 
       setStoredAuthToken(data.token);
       login(data);
-      toast.success('Account created! Please verify your email.');
-      router.push({ pathname: '/auth/verify-email-pending', query: { email: form.email } });
+      // If email is already verified (e.g. Google sign-in), go straight to listings
+      if (data.user?.emailVerified) {
+        toast.success('Account created!');
+        const dest = sanitizeRedirect(router.query.redirect);
+        router.push(dest);
+      } else {
+        toast.success('Account created! Please verify your email.');
+        router.push({ pathname: '/auth/verify-email-pending', query: { email: form.email } });
+      }
     } catch (error) {
       console.error('Signup error:', error);
       toast.error(error.response?.data?.error || error.message || 'Failed to create account');

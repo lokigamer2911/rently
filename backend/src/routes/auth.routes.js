@@ -238,8 +238,17 @@ router.post('/refresh', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Rate limit email verification to prevent brute-force token enumeration
+const verifyEmailLimiter = require('express-rate-limit')({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many verification attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── Email Verification ─────────────────────────────────────
-router.get('/verify-email', async (req, res, next) => {
+router.get('/verify-email', verifyEmailLimiter, async (req, res, next) => {
   try {
     const { token } = z.object({ token: z.string() }).parse(req.query);
     
