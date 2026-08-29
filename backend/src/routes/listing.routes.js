@@ -1,7 +1,18 @@
 const router = require('express').Router();
+const rateLimit = require('express-rate-limit');
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
+
+// SECURITY: Rate limit AI suggestions to prevent Gemini API abuse
+const aiSuggestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // 10 requests per window per user
+  message: { error: 'Too many AI requests. Please wait before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user.id, // rate limit per user, not IP
+});
 const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
 
 // CUID v1/v2 regex — fast guard before hitting the DB
@@ -49,7 +60,7 @@ const ListingInput = z.object({
   address: z.string().optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
-  images: z.array(z.string().url()).default([]),
+  images: z.array(z.string().url()).max(10, 'Maximum 10 images allowed').default([]),
   blockedDates: z.array(z.string()).default([]),
   categoryId: z.string(),
   requiresVerification: z.boolean().default(false),
@@ -421,7 +432,7 @@ router.post('/:id/alert', validateId, requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/ai-suggest', requireAuth, async (req, res, next) => {
+router.post('/ai-suggest', requireAuth, aiSuggestLimiter, async (req, res, next) => {
   try {
     const { model } = req.body;
     if (!model || typeof model !== 'string' || model.trim().length < 3) {

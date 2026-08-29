@@ -2,6 +2,31 @@ const jwt = require('jsonwebtoken');
 
 const prisma = require('../config/prisma');
 
+// SECURITY: Per-socket rate limiter for message sending (sliding window)
+const SOCKET_MSG_LIMIT = parseInt(process.env.SOCKET_MSG_LIMIT, 10) || 30; // max messages per window
+const SOCKET_MSG_WINDOW_MS = 60 * 1000; // 1 minute window
+const socketRateLimits = new Map();
+
+function checkSocketRate(socketId) {
+  const now = Date.now();
+  let record = socketRateLimits.get(socketId);
+  if (!record) {
+    record = { timestamps: [] };
+    socketRateLimits.set(socketId, record);
+  }
+  // Prune timestamps outside the window
+  record.timestamps = record.timestamps.filter(t => now - t < SOCKET_MSG_WINDOW_MS);
+  if (record.timestamps.length >= SOCKET_MSG_LIMIT) {
+    return false; // rate limited
+  }
+  record.timestamps.push(now);
+  return true;
+}
+
+function cleanupSocketRate(socketId) {
+  socketRateLimits.delete(socketId);
+}
+
 /**
  * Parse raw Cookie header into a { name: value } map.
  * Socket.IO handshakes don't use cookie-parser, so we parse manually.
@@ -53,6 +78,11 @@ function registerSocket(io) {
         const threadId = typeof data?.threadId === 'string' ? data.threadId : '';
         const content = typeof data?.content === 'string' ? data.content : '';
 
+        // SECURITY: Rate limit messages per socket
+        if (!checkSocketRate(socket.id)) {
+          return callback?.({ ok: false, error: 'Too many messages. Please slow down.' });
+        }
+
         // Validate content: must be a non-empty string under 2000 chars
         if (!content || typeof content !== 'string' || !content.trim()) {
           return callback?.({ ok: false, error: 'Message content is required' });
@@ -102,7 +132,9 @@ function registerSocket(io) {
       }
     });
 
-    socket.on('disconnect', () => {});
+    socket.on('disconnect', () => {
+      cleanupSocketRate(socket.id);
+    });
   });
 }
 
