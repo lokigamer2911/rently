@@ -16,9 +16,38 @@ function validateId(req, res, next) {
   next();
 }
 
-/** Generate a cryptographically secure 6-digit OTP */
+/** OTP validity window in milliseconds (default 4 hours) */
+const OTP_EXPIRY_MS = parseInt(process.env.OTP_EXPIRY_MS, 10) || 4 * 60 * 60 * 1000;
+
+/**
+ * Generate a cryptographically secure 6-digit OTP with embedded timestamp.
+ * Format: "OTP:EPOCH_MS" — no schema migration needed.
+ * Accepts plain 6-digit strings too (backwards compatible with old OTPs).
+ */
 function generateOTP() {
-  return crypto.randomInt(100000, 999999).toString();
+  const code = crypto.randomInt(100000, 999999).toString();
+  return `${code}:${Date.now()}`;
+}
+
+/**
+ * Verify an OTP against a stored OTP (handles both new timestamped and legacy plain formats).
+ * Returns { valid: boolean, reason?: string }.
+ */
+function verifyOTP(input, stored) {
+  if (!input || !stored) return { valid: false, reason: 'Missing OTP' };
+
+  // New format: stored = "123456:1693000000000"
+  if (stored.includes(':')) {
+    const [storedCode, tsStr] = stored.split(':');
+    const ts = parseInt(tsStr, 10);
+    if (input !== storedCode) return { valid: false, reason: 'Invalid OTP' };
+    if (Date.now() - ts > OTP_EXPIRY_MS) return { valid: false, reason: 'OTP has expired. Please request a new one.' };
+    return { valid: true };
+  }
+
+  // Legacy format: stored = "123456" (no timestamp) — still valid but can't check expiry
+  if (input !== stored) return { valid: false, reason: 'Invalid OTP' };
+  return { valid: true };
 }
 
 // Rate limit OTP verification attempts to prevent brute-force attacks
@@ -156,7 +185,7 @@ router.post('/', requireAuth, async (req, res, next) => {
       userId: req.user.id,
       type: 'BOOKING_UPDATE',
       title: 'Your Pickup OTP 🔑',
-      body: `Your pickup code for ${listing.title} is ${handoverOTP}. Give this to the host when you collect the item.`,
+      body: `Your pickup code for ${listing.title} is ${handoverOTP.split(':')[0]}. Give this to the host when you collect the item.`,
       link: '/bookings',
     });
 
@@ -298,7 +327,8 @@ router.patch('/:id/pickup', requireAuth, validateId, otpVerifyLimiter, async (re
     if (booking.listing.ownerId !== req.user.id) return res.status(404).json({ error: 'Not found' });
     if (booking.status !== 'CONFIRMED') return res.status(400).json({ error: 'Booking must be confirmed first' });
 
-    if (booking.handoverOTP !== otp) return res.status(400).json({ error: 'Invalid OTP' });
+    const otpResult = verifyOTP(otp, booking.handoverOTP);
+    if (!otpResult.valid) return res.status(400).json({ error: otpResult.reason });
 
     const returnOTP = generateOTP();
 
@@ -319,7 +349,7 @@ router.patch('/:id/pickup', requireAuth, validateId, otpVerifyLimiter, async (re
       userId: booking.renterId,
       type: 'BOOKING_UPDATE',
       title: 'Your Return OTP 🔑',
-      body: `Your return code for ${booking.listing.title} is ${returnOTP}. Give this to the host when you return the item.`,
+      body: `Your return code for ${booking.listing.title} is ${returnOTP.split(':')[0]}. Give this to the host when you return the item.`,
       link: '/bookings',
     });
 
@@ -348,7 +378,8 @@ router.patch('/:id/return', requireAuth, validateId, otpVerifyLimiter, async (re
     if (booking.listing.ownerId !== req.user.id) return res.status(404).json({ error: 'Not found' });
     if (booking.status !== 'PICKED_UP') return res.status(400).json({ error: 'Item must be picked up first' });
 
-    if (booking.returnOTP !== otp) return res.status(400).json({ error: 'Invalid OTP' });
+    const otpResult = verifyOTP(otp, booking.returnOTP);
+    if (!otpResult.valid) return res.status(400).json({ error: otpResult.reason });
 
     const updated = await prisma.booking.update({
       where: { id: req.params.id },

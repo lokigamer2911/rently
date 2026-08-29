@@ -53,6 +53,17 @@ router.patch('/users/:id/role', validateId, async (req, res, next) => {
 
 router.delete('/listings/:id', validateId, async (req, res, next) => {
   try {
+    // SECURITY: Prevent deletion of listings with active bookings
+    const activeBooking = await prisma.booking.findFirst({
+      where: {
+        listingId: req.params.id,
+        status: { in: ['PENDING', 'CONFIRMED', 'PICKED_UP'] }
+      },
+      select: { id: true }
+    });
+    if (activeBooking) {
+      return res.status(409).json({ error: 'Cannot delete listing with active bookings. Cancel or complete them first.' });
+    }
     await prisma.listing.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
   } catch (e) { next(e); }
