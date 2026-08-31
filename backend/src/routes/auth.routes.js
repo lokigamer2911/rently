@@ -84,7 +84,7 @@ router.post('/signup', async (req, res, next) => {
     const exists = await prisma.user.findUnique({ where: { email: body.email } });
     if (exists) return res.status(409).json({ error: 'Email already registered' });
 
-    const passwordHash = await bcrypt.hash(body.password, 10);
+    const passwordHash = await bcrypt.hash(body.password, 12);
     
     // Generate email verification token
     const { raw: verifyToken, hash: verifyHash, expiresAt: verifyExpires } = 
@@ -108,7 +108,7 @@ router.post('/signup', async (req, res, next) => {
     const { accessToken, refreshToken } = setAuthCookies(res, user);
     
     // Store refresh token hash in DB
-    const refreshHash = await bcrypt.hash(refreshToken, 10);
+    const refreshHash = await bcrypt.hash(refreshToken, 12);
     await prisma.user.update({ where: { id: user.id }, data: { refreshToken: refreshHash } });
 
     res.json({ 
@@ -129,7 +129,9 @@ router.post('/login', async (req, res, next) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
-      return res.status(401).json({ error: 'No account found for this email. Please create an account first.' });
+      // SECURITY: Generic error to prevent username/email enumeration
+      // Same message as wrong password — attacker can't distinguish
+      return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     // Check account lockout
@@ -157,7 +159,8 @@ router.post('/login', async (req, res, next) => {
 
       const remaining = MAX_FAILED_ATTEMPTS - attempts;
       if (remaining > 0) {
-        return res.status(401).json({ error: `Incorrect password. ${remaining} attempts remaining before lockout.` });
+        // SECURITY: Generic error — don't reveal whether the email exists
+        return res.status(401).json({ error: 'Invalid email or password.' });
       }
       // lockedUntil is always set when attempts >= MAX_FAILED_ATTEMPTS
       return res.status(423).json({ 
@@ -171,7 +174,7 @@ router.post('/login', async (req, res, next) => {
     const ua = req.headers['user-agent'] || '';
     const { accessToken, refreshToken } = setAuthCookies(res, user);
 
-    const refreshHash = await bcrypt.hash(refreshToken, 10);
+    const refreshHash = await bcrypt.hash(refreshToken, 12);
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -228,7 +231,7 @@ router.post('/refresh', async (req, res, next) => {
     const fullUser = await prisma.user.findUnique({ where: { id: user.id } });
     const { accessToken, refreshToken: newRefresh } = setAuthCookies(res, fullUser);
 
-    const newRefreshHash = await bcrypt.hash(newRefresh, 10);
+    const newRefreshHash = await bcrypt.hash(newRefresh, 12);
     await prisma.user.update({
       where: { id: user.id },
       data: { refreshToken: newRefreshHash },
@@ -349,7 +352,7 @@ router.post('/reset-password', async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid or expired reset link' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     // Reset password + invalidate ALL sessions (increment tokenVersion)
     await prisma.user.update({
@@ -372,7 +375,7 @@ router.post('/reset-password', async (req, res, next) => {
 // ─── Firebase Exchange ──────────────────────────────────────
 router.post('/firebase', firebaseLimiter, async (req, res, next) => {
   try {
-    const { idToken } = z.object({ idToken: z.string() }).parse(req.body);
+    const { idToken, createAccount } = z.object({ idToken: z.string(), createAccount: z.boolean().default(true) }).parse(req.body);
     const auth = firebaseAdmin.getAuth();
     if (!auth) return res.status(500).json({ error: 'Firebase is not configured on this server' });
     const decoded = await auth.verifyIdToken(idToken);
@@ -405,7 +408,7 @@ router.post('/firebase', firebaseLimiter, async (req, res, next) => {
     }
 
     if (user) {
-      // SECURITY: If account already has a different Firebase UID, block the link
+      // Account exists — link it
       // This prevents hijacking an account that's already linked to another Google account
       if (user.firebaseUid && user.firebaseUid !== decoded.uid) {
         logger.warn(`Firebase link blocked: user ${user.id} already linked to different Firebase UID`, {
@@ -436,7 +439,13 @@ router.post('/firebase', firebaseLimiter, async (req, res, next) => {
         email: decoded.email,
       });
     } else {
-      // Generate email verification token for new Firebase users
+      // No existing account found
+      if (!createAccount) {
+        // SECURITY: Login flow — don't auto-create accounts. Redirect user to signup.
+        return res.status(404).json({ error: 'No account found', redirectToSignup: true });
+      }
+
+      // Signup flow — create new Firebase user
       const { raw: verifyToken, hash: verifyHash, expiresAt: verifyExpires } = 
         await createExpiringToken(60 * 24); // 24 hours
 
@@ -465,7 +474,7 @@ router.post('/firebase', firebaseLimiter, async (req, res, next) => {
     const ua = req.headers['user-agent'] || '';
     const { accessToken, refreshToken } = setAuthCookies(res, user);
 
-    const refreshHash = await bcrypt.hash(refreshToken, 10);
+    const refreshHash = await bcrypt.hash(refreshToken, 12);
     await prisma.user.update({
       where: { id: user.id },
       data: {
