@@ -229,7 +229,7 @@ router.patch('/:id/status', requireAuth, validateId, async (req, res, next) => {
     }).parse(req.body);
 
     const booking = await prisma.booking.findUnique({
-      where: { id: req.params.id }, include: { listing: { include: { owner: true } } },
+      where: { id: req.params.id }, include: { listing: { include: { owner: { select: { id: true, name: true, avatarUrl: true } } } } },
     });
     if (!booking) return res.status(404).json({ error: 'Not found' });
 
