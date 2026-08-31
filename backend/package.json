@@ -13,7 +13,7 @@
     "lint": "eslint \"src/**/*.js\""
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^7.10.0",
     "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.5.1",
