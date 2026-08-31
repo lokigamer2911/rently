@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
@@ -34,14 +35,14 @@ function sanitizeId(raw) {
   return trimmed;
 }
 
-export default function ListingDetail() {
+export default function ListingDetail({ initialListing }) {
   const router = useRouter();
   const { user } = useAuth();
   const rawId = router.query?.id;
   const safeId = sanitizeId(rawId);
   const [accessToken, setAccessToken] = useState('');
   const accessParam = accessToken ? `?access=${encodeURIComponent(accessToken)}` : '';
-  const { data: listing } = useSWR(safeId ? `/listings/${safeId}${accessParam}` : null, fetcher);
+  const { data: listing } = useSWR(safeId ? `/listings/${safeId}${accessParam}` : null, fetcher, { fallbackData: initialListing });
   const { data: booked } = useSWR(safeId ? `/listings/${safeId}/availability${accessParam}` : null, fetcher);
   const { addToCart } = useCart();
   const isOwner = user && listing && (
@@ -49,6 +50,13 @@ export default function ListingDetail() {
     user.id === listing.owner?.id ||
     (user.email && listing.owner?.email && user.email === listing.owner.email)
   );
+  // SEO: use server-fetched data for initial render, SWR updates after
+  const seoListing = listing || initialListing;
+  const seoTitle = seoListing ? `${seoListing.title} | Rent on Rently` : 'Listing | Rently';
+  const seoDescription = seoListing ? (seoListing.description || `Rent ${seoListing.title} for Rs ${(seoListing.pricePerDay / 100).toFixed(0)}/day in ${seoListing.city || 'India'}`).slice(0, 160) : '';
+  const seoImage = seoListing?.images?.[0] || '/og-default.png';
+  const siteUrl = process.env.NEXT_PUBLIC_CLIENT_URL || 'https://rently-chi.vercel.app';
+
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [depositType, setDepositType] = useState('CASH');
@@ -213,7 +221,46 @@ export default function ListingDetail() {
 
   return (
     <>
-      <script src="https://checkout.razorpay.com/v1/checkout.js" async />        <div className="space-y-6 sm:space-y-8 md:space-y-10 pb-24 md:pb-0">
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:image" content={seoImage} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${siteUrl}/listings/${safeId}`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        <meta name="twitter:image" content={seoImage} />
+        {seoListing && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Product',
+              name: seoListing.title,
+              description: seoDescription,
+              image: seoImage,
+              offers: {
+                '@type': 'Offer',
+                price: seoListing.pricePerDay / 100,
+                priceCurrency: 'INR',
+                availability: seoListing.available ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+              },
+              ...(seoListing.reviews?.length > 0 && {
+                aggregateRating: {
+                  '@type': 'AggregateRating',
+                  ratingValue: (seoListing.reviews.reduce((s, r) => s + r.rating, 0) / seoListing.reviews.length).toFixed(1),
+                  reviewCount: seoListing.reviews.length,
+                },
+              }),
+            }) }}
+          />
+        )}
+      </Head>
+      <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+      <div className="space-y-6 sm:space-y-8 md:space-y-10 pb-24 md:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link href="/listings" className="btn-ghost">
             <FiArrowLeft size={16} />
@@ -686,4 +733,42 @@ function SimilarListings({ currentListing, user }) {
       </div>
     </section>
   );
+}
+
+// SSR: Pre-fetch listing data for SEO and faster first paint
+export async function getServerSideProps(context) {
+  const { id } = context.params;
+  const siteUrl = process.env.NEXT_PUBLIC_CLIENT_URL || 'https://rently-chi.vercel.app';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
+
+  try {
+    const res = await fetch(`${apiUrl}/listings/${id}`, {
+      headers: { 'User-Agent': 'RentlyBot/1.0 (SEO crawler)' },
+    });
+
+    if (!res.ok) {
+      return { notFound: true };
+    }
+
+    const listing = await res.json();
+
+    // Parse images if they come as JSON string
+    if (typeof listing.images === 'string') {
+      try { listing.images = JSON.parse(listing.images); } catch { listing.images = []; }
+    }
+    if (typeof listing.blockedDates === 'string') {
+      try { listing.blockedDates = JSON.parse(listing.blockedDates); } catch { listing.blockedDates = []; }
+    }
+
+    return {
+      props: {
+        initialListing: listing,
+      },
+      // Revalidate every 60 seconds for ISR-like behavior
+      revalidate: 60,
+    };
+  } catch (error) {
+    // If backend is down, still render the page (SWR will retry client-side)
+    return { props: { initialListing: null } };
+  }
 }

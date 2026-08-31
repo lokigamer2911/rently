@@ -1,9 +1,14 @@
-# *
+# Allow all crawlers
 User-agent: *
 Allow: /
 
+# Disallow admin pages
+User-agent: *
+Disallow: /admin
+Disallow: /auth/
+
 # Host
-Host: https://rently-demo.com
+Host: https://rently-chi.vercel.app
 
 # Sitemaps
-Sitemap: https://rently-demo.com/sitemap.xml
+Sitemap: https://rently-chi.vercel.app/sitemap.xml

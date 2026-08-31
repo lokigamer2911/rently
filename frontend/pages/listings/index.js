@@ -406,3 +406,38 @@ export default function Listings() {
     </div>
   );
 }
+
+// SSR: Pre-fetch initial listings for SEO and faster first paint
+export async function getServerSideProps(context) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
+  const { q, city, categoryId, minPrice, maxPrice } = context.query;
+
+  try {
+    const params = new URLSearchParams({});
+    if (q) params.set('q', q);
+    if (city) params.set('city', city);
+    if (categoryId) params.set('categoryId', categoryId);
+    if (minPrice) params.set('minPrice', minPrice);
+    if (maxPrice) params.set('maxPrice', maxPrice);
+
+    const url = `${apiUrl}/listings${params.toString() ? '?' + params.toString() : ''}`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'RentlyBot/1.0 (SEO crawler)' },
+    });
+
+    if (!res.ok) {
+      return { props: { initialListings: [] } };
+    }
+
+    const listings = await res.json();
+
+    return {
+      props: {
+        initialListings: Array.isArray(listings) ? listings : [],
+      },
+      revalidate: 60,
+    };
+  } catch {
+    return { props: { initialListings: [] } };
+  }
+}
