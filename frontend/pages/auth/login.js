@@ -119,8 +119,32 @@ export default function Login() {
       setIsGoogleRedirecting(true);
       const cred = await signInWithPopup(auth, googleProvider);
       const idToken = await cred.user.getIdToken();
-      const { data } = await api.post('/auth/firebase', { idToken });
-      finish(data);
+
+      // SECURITY: Pass createAccount: false — login page should not auto-create accounts.
+      // If no account exists, redirect to signup with pre-filled Google data.
+      try {
+        const { data } = await api.post('/auth/firebase', { idToken, createAccount: false });
+        finish(data);
+      } catch (linkError) {
+        if (linkError.response?.status === 404 && linkError.response?.data?.redirectToSignup) {
+          // No account found — redirect to signup with Google profile data
+          const googleUser = cred.user;
+          const dest = sanitizeRedirect(router.query.redirect);
+          router.replace({
+            pathname: '/auth/signup',
+            query: {
+              redirect: dest,
+              email: googleUser.email || '',
+              name: googleUser.displayName || '',
+              avatarUrl: googleUser.photoURL || '',
+              message: 'No account found with this email. Create your account to get started.',
+              googleIdToken: idToken,
+            }
+          });
+          return;
+        }
+        throw linkError; // Re-throw other errors
+      }
     } catch (error) {
       console.error('Google sign-in error:', error);
       toast.error(getGoogleErrorMessage(error));

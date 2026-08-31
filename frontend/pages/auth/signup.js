@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { FiArrowRight, FiShield, FiZap } from 'react-icons/fi';
+import { signInWithPopup } from 'firebase/auth';
 import { api } from '../../lib/api';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth, firebaseInitError } from '../../lib/firebase';
+import { auth, googleProvider, firebaseInitError } from '../../lib/firebase';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
 import TiltCard from '../../components/TiltCard';
@@ -23,16 +24,40 @@ export default function Signup() {
   const router = useRouter();
   const { login } = useAuth();
   const initialEmail = typeof router.query.email === 'string' ? router.query.email : '';
+  const initialName = typeof router.query.name === 'string' ? router.query.name : '';
+  const googleIdToken = typeof router.query.googleIdToken === 'string' ? router.query.googleIdToken : '';
   const signupMessage = typeof router.query.message === 'string' && router.query.message.trim()
     ? router.query.message
     : '';
-  const [form, setForm] = useState({ name: '', email: initialEmail, password: '' });
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [form, setForm] = useState({ name: initialName, email: initialEmail, password: '' });
 
   useEffect(() => {
-    if (initialEmail) {
-      setForm((prev) => ({ ...prev, email: initialEmail }));
-    }
-  }, [initialEmail]);
+    setForm((prev) => ({
+      ...prev,
+      email: initialEmail || prev.email,
+      name: initialName || prev.name,
+    }));
+  }, [initialEmail, initialName]);
+
+  // If redirected from login with a Google ID token, auto-create account
+  useEffect(() => {
+    if (!googleIdToken) return;
+    const autoCreateFromGoogle = async () => {
+      try {
+        const { data } = await api.post('/auth/firebase', { idToken: googleIdToken, createAccount: true });
+        setStoredAuthToken(data.token);
+        login(data);
+        toast.success('Account created with Google!');
+        const dest = sanitizeRedirect(router.query.redirect);
+        router.push(dest);
+      } catch (error) {
+        console.error('Google auto-create error:', error);
+        toast.error('Failed to create account. Please fill in the form below.');
+      }
+    };
+    autoCreateFromGoogle();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async (e) => {
     e.preventDefault();
@@ -53,13 +78,11 @@ export default function Signup() {
 
       const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
       await updateProfile(cred.user, { displayName: form.name });
-      // Backend sends verification email via /auth/firebase exchange — no need to send a duplicate
       const idToken = await cred.user.getIdToken();
-      const { data } = await api.post('/auth/firebase', { idToken });
+      const { data } = await api.post('/auth/firebase', { idToken, createAccount: true });
 
       setStoredAuthToken(data.token);
       login(data);
-      // If email is already verified (e.g. Google sign-in), go straight to listings
       if (data.user?.emailVerified) {
         toast.success('Account created!');
         const dest = sanitizeRedirect(router.query.redirect);
@@ -71,6 +94,38 @@ export default function Signup() {
     } catch (error) {
       console.error('Signup error:', error);
       toast.error(error.response?.data?.error || error.message || 'Failed to create account');
+    }
+  };
+
+  const googleSignup = async () => {
+    if (!auth || firebaseInitError) return toast.error('Firebase is not configured.');
+    if (!googleProvider) return toast.error('Google provider not initialized.');
+
+    try {
+      setIsGoogleLoading(true);
+      const cred = await signInWithPopup(auth, googleProvider);
+      const idToken = await cred.user.getIdToken();
+      const { data } = await api.post('/auth/firebase', { idToken, createAccount: true });
+
+      setStoredAuthToken(data.token);
+      login(data);
+      toast.success('Account created with Google!');
+      if (data.user?.emailVerified) {
+        const dest = sanitizeRedirect(router.query.redirect);
+        router.push(dest);
+      } else {
+        router.push({ pathname: '/auth/verify-email-pending', query: { email: data.user?.email } });
+      }
+    } catch (error) {
+      console.error('Google signup error:', error);
+      if (error.response?.status === 409) {
+        toast.error('An account with this email already exists. Please sign in instead.');
+        router.push('/auth/login');
+      } else {
+        toast.error(error.response?.data?.error || error.message || 'Google sign-up failed');
+      }
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -150,6 +205,12 @@ export default function Signup() {
             <FiArrowRight size={16} />
           </Button>
         </form>
+
+        <div className="my-5 text-center text-xs uppercase tracking-[0.24em] text-slate-400">or continue with</div>
+
+        <Button type="button" variant="secondary" onClick={googleSignup} className="w-full !py-3.5" disabled={isGoogleLoading}>
+          {isGoogleLoading ? 'Connecting to Google...' : 'Google'}
+        </Button>
 
         <p className="mt-6 text-sm text-slate-500">
           Already have an account?{' '}
