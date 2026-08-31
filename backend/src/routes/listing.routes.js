@@ -439,6 +439,9 @@ router.post('/ai-suggest', requireAuth, aiSuggestLimiter, async (req, res, next)
       return res.status(400).json({ error: 'Please enter a model name of at least 3 characters' });
     }
 
+    // SECURITY: Sanitize input against prompt injection — strip control chars, limit length
+    const sanitizedModel = model.trim().replace(/[\x00-\x1f\x7f]/g, '').slice(0, 100);
+
     // Fetch active categories to pass to prompt
     let categories = [];
     try {
@@ -463,7 +466,7 @@ router.post('/ai-suggest', requireAuth, aiSuggestLimiter, async (req, res, next)
     if (geminiKey) {
       try {
         const prompt = `You are a helpful product description and pricing assistant for Rentrex, a premium P2P rental platform.
-The user wants to list this item for rent: "${model}".
+The user wants to list this item for rent: "${sanitizedModel}".
 
 Available categories (you must match the item to exactly one of these category slugs):
 ${catListStr}
@@ -502,6 +505,18 @@ Return ONLY a raw JSON object. Do not wrap it in markdown code blocks like \`\`\
       } catch (geminiError) {
         console.error('Gemini API call failed, running fallback:', geminiError);
       }
+    }
+
+    // SECURITY: Validate AI response shape — ignore unexpected structures to prevent prompt injection leakage
+    if (aiResult && typeof aiResult === 'object') {
+      aiResult = {
+        title: typeof aiResult.title === 'string' ? aiResult.title.slice(0, 200) : null,
+        description: typeof aiResult.description === 'string' ? aiResult.description.slice(0, 2000) : null,
+        categorySlug: typeof aiResult.categorySlug === 'string' ? aiResult.categorySlug.slice(0, 50) : null,
+        suggestedPricePerDay: typeof aiResult.suggestedPricePerDay === 'number' ? aiResult.suggestedPricePerDay : null,
+        suggestedDeposit: typeof aiResult.suggestedDeposit === 'number' ? aiResult.suggestedDeposit : null,
+        suggestedDepositNote: typeof aiResult.suggestedDepositNote === 'string' ? aiResult.suggestedDepositNote.slice(0, 200) : null,
+      };
     }
 
     // Fallback if Gemini key is missing or API call failed
