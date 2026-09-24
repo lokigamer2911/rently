@@ -1,22 +1,77 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
+import { FiAlertCircle, FiCheck, FiExternalLink, FiX } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
 import Button from '../../components/Button';
 import { useAuth } from '../../hooks/useAuth';
+
+const EMPTY_PAYMENTS = [];
 
 export default function Admin() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState('users');
+  const [busyPaymentId, setBusyPaymentId] = useState(null);
   const { data: stats } = useSWR('/admin/stats', fetcher);
   const { data: users, mutate: mutateUsers } = useSWR('/admin/users', fetcher);
   const { data: disputes, mutate: mutateDisputes } = useSWR('/disputes', fetcher);
+  // Only admins hit this endpoint — everyone else would just collect a 403.
+  const { data: paymentsData, mutate: mutatePayments } = useSWR(
+    user?.role === 'ADMIN' ? '/admin/payments?status=ALL' : null,
+    fetcher,
+  );
+  const payments = paymentsData || EMPTY_PAYMENTS;
+
+  // The "UPI payment awaiting verification" notification links straight here.
+  useEffect(() => {
+    if (router.isReady && router.query.tab === 'payments') setTab('payments');
+  }, [router.isReady, router.query.tab]);
 
   const setRole = async (id, role) => {
     await api.patch(`/admin/users/${id}/role`, { role });
     toast.success('Role updated'); mutateUsers();
+  };
+
+  const verifyPayment = async (payment) => {
+    // Irreversible: this confirms the booking and locks the listing.
+    const confirmed = window.confirm(
+      `Confirm you have received Rs ${(payment.amount / 100).toFixed(2)} from `
+      + `${payment.renterName || 'this renter'}?\n\n`
+      + `Reference: ${payment.ref || '—'}\n`
+      + `UTR: ${payment.utr || '—'}\n\n`
+      + 'Check your bank statement or UPI app for a matching credit before continuing. '
+      + 'This will confirm the booking.',
+    );
+    if (!confirmed) return;
+
+    setBusyPaymentId(payment.id);
+    try {
+      await api.post(`/admin/payments/${payment.id}/verify`);
+      toast.success('Payment verified — booking confirmed');
+      mutatePayments();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not verify the payment');
+    } finally {
+      setBusyPaymentId(null);
+    }
+  };
+
+  const rejectPayment = async (payment) => {
+    const reason = window.prompt('Why was this payment not matched? The renter will see this.', 'No matching credit in the bank account');
+    if (reason === null) return;
+
+    setBusyPaymentId(payment.id);
+    try {
+      await api.post(`/admin/payments/${payment.id}/reject`, { reason });
+      toast.success('Payment marked as not received');
+      mutatePayments();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not update the payment');
+    } finally {
+      setBusyPaymentId(null);
+    }
   };
 
   const resolveDispute = async (id, action) => {
@@ -46,9 +101,17 @@ export default function Admin() {
           </div>
         ))}
       </div>
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-3 sm:gap-4">
         <Button variant={tab === 'users' ? 'primary' : 'ghost'} onClick={() => setTab('users')}>Users</Button>
         <Button variant={tab === 'disputes' ? 'primary' : 'ghost'} onClick={() => setTab('disputes')}>Disputes</Button>
+        <Button variant={tab === 'payments' ? 'primary' : 'ghost'} onClick={() => setTab('payments')}>
+          Payments
+          {payments.filter(p => p.status === 'AWAITING_VERIFICATION').length > 0 && (
+            <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+              {payments.filter(p => p.status === 'AWAITING_VERIFICATION').length}
+            </span>
+          )}
+        </Button>
       </div>
 
       {tab === 'users' && (
@@ -71,6 +134,123 @@ export default function Admin() {
             ))}
           </tbody>
         </table>
+        </div>
+      )}
+
+      {tab === 'payments' && (
+        <div className="card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold">UPI payments</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                A UPI QR gives no automatic confirmation. Open your bank statement or UPI app, find the credit
+                matching the reference / UTR below, then verify it. Verifying confirms the booking.
+              </p>
+            </div>
+            <Button variant="ghost" className="!py-2 !px-4 !text-xs" onClick={() => mutatePayments()}>Refresh</Button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[820px]">
+              <thead>
+                <tr className="text-left text-slate-500 border-b">
+                  <th className="pb-2">Renter</th>
+                  <th className="pb-2">Item</th>
+                  <th className="pb-2">Amount</th>
+                  <th className="pb-2">Reference / UTR</th>
+                  <th className="pb-2">Submitted</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.length === 0 ? (
+                  <tr><td colSpan="7" className="py-6 text-center text-slate-500">No UPI payments yet.</td></tr>
+                ) : payments.map((payment) => (
+                  <tr key={payment.id} className="border-t align-top">
+                    <td className="py-3">
+                      <p className="font-semibold text-slate-800">{payment.renterName || 'Unknown'}</p>
+                      <p className="text-[11px] text-slate-400">{payment.renterPhone || payment.renterEmail || ''}</p>
+                    </td>
+                    <td className="py-3 max-w-[200px]">
+                      <p className="truncate" title={payment.listingTitle || ''}>{payment.listingTitle || '—'}</p>
+                      <p className="text-[11px] text-slate-400">{payment.listingCity || ''}</p>
+                    </td>
+                    <td className="py-3 font-semibold whitespace-nowrap">Rs {(payment.amount / 100).toFixed(2)}</td>
+                    <td className="py-3">
+                      <p className="font-mono text-xs">{payment.ref || '—'}</p>
+                      <p className="text-[11px] text-slate-500">{payment.utr || 'no UTR submitted'}</p>
+                      {payment.note && (
+                        <p className="text-[11px] text-slate-400 italic max-w-[200px] truncate" title={payment.note}>{payment.note}</p>
+                      )}
+                      {payment.proofUrl && (
+                        <a
+                          href={payment.proofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-brand-600 inline-flex items-center gap-1 mt-1"
+                        >
+                          <FiExternalLink size={11} /> Screenshot
+                        </a>
+                      )}
+                      <p className="text-[10px] text-slate-400 mt-1">to {payment.payeeVpa || '—'}</p>
+                    </td>
+                    <td className="py-3 text-xs text-slate-500 whitespace-nowrap">
+                      {payment.createdAt ? new Date(payment.createdAt).toLocaleString() : '—'}
+                    </td>
+                    <td className="py-3">
+                      <span className={`px-2 py-1 rounded text-[10px] font-bold whitespace-nowrap ${
+                        payment.status === 'PAID' ? 'bg-emerald-100 text-emerald-700'
+                          : payment.status === 'AWAITING_VERIFICATION' ? 'bg-amber-100 text-amber-700'
+                            : payment.status === 'REJECTED' ? 'bg-red-100 text-red-700'
+                              : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {payment.status}
+                      </span>
+                      {payment.status === 'PAID' && payment.verifiedAt && (
+                        <p className="text-[10px] text-slate-400 mt-1">{new Date(payment.verifiedAt).toLocaleDateString()}</p>
+                      )}
+                      {payment.rejectionReason && (
+                        <p className="text-[10px] text-red-500 mt-1 max-w-[140px]">{payment.rejectionReason}</p>
+                      )}
+                    </td>
+                    <td className="py-3">
+                      {payment.status === 'PAID' ? (
+                        <span className="text-[11px] text-slate-400">Settled</span>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            variant="primary"
+                            className="!py-1.5 !px-3 !text-xs flex items-center gap-1.5 whitespace-nowrap"
+                            disabled={busyPaymentId === payment.id}
+                            onClick={() => verifyPayment(payment)}
+                          >
+                            <FiCheck size={13} /> Money received
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="!py-1.5 !px-3 !text-xs text-red-600 hover:bg-red-50 flex items-center gap-1.5 whitespace-nowrap"
+                            disabled={busyPaymentId === payment.id}
+                            onClick={() => rejectPayment(payment)}
+                          >
+                            <FiX size={13} /> Not received
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 flex gap-3">
+            <FiAlertCircle size={16} className="text-slate-400 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Only hit &ldquo;Money received&rdquo; once you can see the credit. Bookings stay PENDING until then, and
+              the listing is only marked unavailable on verification.
+            </p>
+          </div>
         </div>
       )}
 

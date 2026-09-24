@@ -3,11 +3,15 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
+/**
+ * Steps of the hosting flow, not an earnings projection. The chart used to
+ * show made-up monthly revenue figures, which read as a promise we can't back.
+ */
 const barConfigs = [
-  { targetH: 0.7, label: 'Month 1', value: '₹5,000', color: '#34d399', delay: 0.1 },
-  { targetH: 1.4, label: 'Month 2', value: '₹12,000', color: '#10b981', delay: 0.4 },
-  { targetH: 2.1, label: 'Month 3', value: '₹18,000', color: '#059669', delay: 0.7 },
-  { targetH: 2.9, label: 'Month 4', value: '₹28,000+', color: '#047857', delay: 1.0 },
+  { targetH: 0.7, label: 'Step 1', value: 'List it', color: '#34d399', delay: 0.1 },
+  { targetH: 1.4, label: 'Step 2', value: 'Get booked', color: '#10b981', delay: 0.4 },
+  { targetH: 2.1, label: 'Step 3', value: 'Hand over', color: '#059669', delay: 0.7 },
+  { targetH: 2.9, label: 'Step 4', value: 'Get paid', color: '#047857', delay: 1.0 },
 ];
 
 function Bar({ position, targetH, label, value, color, delay }) {

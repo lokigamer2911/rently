@@ -25,7 +25,8 @@ Thumbs.db
 coverage/
 
 # Prisma
-/backend/prisma/migrations
+# NOTE: /backend/prisma/migrations must NOT be ignored — `prisma migrate deploy`
+# runs in CI/CD and needs every migration committed, otherwise production drifts.
 /backend/prisma/dev.db
 
 # Ad-hoc scripts

@@ -124,8 +124,16 @@ app.get('/health', async (_, res) => {
     checks.database = { status: 'error', message: e.message };
   }
 
-  // 2. Razorpay configured
-  checks.razorpay = { status: process.env.RAZORPAY_KEY_ID ? 'configured' : 'missing' };
+  // 2. Payments — Razorpay when enabled, otherwise the manual UPI QR fallback
+  const payments = require('./config/upi');
+  checks.razorpay = {
+    status: payments.isRazorpayEnabled() ? 'configured' : 'missing',
+    enabled: payments.isRazorpayEnabled(),
+  };
+  checks.upiQrFallback = {
+    status: payments.isUpiQrEnabled() ? 'configured' : 'missing',
+    payees: payments.getPayees().length,
+  };
 
   // 3. Firebase configured
   checks.firebase = { status: process.env.FIREBASE_PROJECT_ID ? 'configured' : 'missing' };

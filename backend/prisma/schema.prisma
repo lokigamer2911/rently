@@ -136,13 +136,31 @@ model Booking {
 model Payment {
   id                String   @id @default(cuid())
   bookingId         String   @unique
-  razorpayOrderId   String   @unique
+  // "RAZORPAY" once the gateway is live, "UPI_QR" while we collect on a static UPI QR
+  method            String   @default("RAZORPAY")
+  razorpayOrderId   String?  @unique
   razorpayPaymentId String?
   razorpaySignature String?
   amount            Int
+  // CREATED, AWAITING_VERIFICATION, PAID, FAILED, REJECTED
   status            String   @default("CREATED")
+
+  // UPI QR fallback fields
+  upiRef            String?  @unique // short reference embedded in the UPI note so it shows up in the bank statement
+  upiPayeeVpa       String?
+  upiPayeeName      String?
+  payerUtr          String? // UTR / RRN / transaction id the renter pastes back from their UPI app
+  payerNote         String?
+  proofUrl          String?
+  verifiedAt        DateTime?
+  verifiedById      String?
+  rejectionReason   String?
+
   createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   booking           Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
 }
 
 model Review {

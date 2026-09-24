@@ -48,6 +48,12 @@ Go to: **Render Dashboard → Your Service → Environment**
 | `RAZORPAY_KEY_ID` | `rzp_test_xxxxx` | Razorpay test/live keys |
 | `RAZORPAY_KEY_SECRET` | `xxxxx` | Razorpay secret |
 | `RAZORPAY_WEBHOOK_SECRET` | `xxxxx` | Razorpay webhook signing secret |
+| `PAYMENTS_RAZORPAY_ENABLED` | `false` | `true` only once Razorpay is live. While `false`, checkout uses the UPI QR fallback |
+| `UPI_PAYEES` | `[{"vpa":"you@okhdfcbank","name":"Rently","label":"Founder"}]` | UPI IDs for you + co-founders, handed out round-robin per booking |
+| `UPI_VPA` | `you@okhdfcbank` | Shorthand when you only have one UPI ID |
+| `UPI_PAYEE_NAME` | `Rently` | Payee name shown in the UPI app |
+| `UPI_STATIC_QR_IMAGE_URL` | `https://res.cloudinary.com/.../qr.png` | Optional: your own UPI QR image, shown under the generated one |
+| `PAYMENTS_SUPPORT_CONTACT` | `payments@rently.in` | Optional: shown when a payment needs matching by hand |
 | `GEMINI_API_KEY` | `AIzaSy...` | Google Gemini (for AI suggestions) |
 | `SENDGRID_API_KEY` | `SG.xxxx` | SendGrid email service |
 | `EMAIL_FROM` | `noreply@rently.in` | Sender email address |
