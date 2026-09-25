@@ -14,7 +14,7 @@ import {
   FiCamera,
   FiFileText,
   FiLock,
-  FiWallet,
+  FiCreditCard,
   FiUserCheck,
 } from 'react-icons/fi';
 import Button from '../components/Button';
@@ -138,7 +138,7 @@ const LandingPage = () => {
    */
   const heroHighlights = [
     { icon: FiShield, title: 'Verified handover', desc: 'Photo and OTP sign-off at pickup and return.' },
-    { icon: FiWallet, title: 'Secure payments', desc: 'Pay by UPI QR today, cards rolling out shortly.' },
+    { icon: FiCreditCard, title: 'Secure payments', desc: 'Pay by UPI QR today, cards rolling out shortly.' },
     { icon: FiClock, title: 'Rent flexibly', desc: 'By the hour, the day, or the month — your call.' },
   ];
 

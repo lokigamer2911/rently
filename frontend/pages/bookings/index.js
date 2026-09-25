@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
-import { FiFileText, FiStar, FiClock, FiDownload, FiInfo, FiMapPin, FiCamera, FiX, FiActivity, FiWallet } from 'react-icons/fi';
+import { FiFileText, FiStar, FiClock, FiDownload, FiInfo, FiMapPin, FiCamera, FiX, FiActivity, FiCreditCard } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
 import Button from '../../components/Button';
 import HandoverModal from '../../components/HandoverModal';
@@ -275,7 +275,7 @@ export default function Bookings() {
                       className="!py-2.5 !px-5 flex items-center gap-2"
                       onClick={() => resumeUpiPayment(b)}
                     >
-                      <FiWallet size={14} />
+                      <FiCreditCard size={14} />
                       {b.payment?.status === 'AWAITING_VERIFICATION' ? 'Under review' : 'Pay via UPI QR'}
                     </Button>
                   )}

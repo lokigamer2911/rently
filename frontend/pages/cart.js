@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { FiTrash2, FiShoppingCart, FiShield, FiCheckCircle, FiWallet } from 'react-icons/fi';
+import { FiTrash2, FiShoppingCart, FiShield, FiCheckCircle, FiCreditCard } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
@@ -323,7 +323,7 @@ export default function Cart() {
           {razorpayEnabled === false && (
             <div className="bg-amber-50 border border-amber-100 rounded-[1.2rem] p-4 flex items-center gap-3">
               <div className="h-8 w-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0">
-                <FiWallet size={16} />
+                <FiCreditCard size={16} />
               </div>
               <div className="text-xs">
                 <p className="font-bold text-amber-900 uppercase tracking-wider">Razorpay integration is in progress</p>
