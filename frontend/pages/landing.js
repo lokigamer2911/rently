@@ -11,8 +11,11 @@ import {
   FiClock,
   FiZap,
   FiDollarSign,
-  FiSmile,
-  FiTarget,
+  FiCamera,
+  FiFileText,
+  FiLock,
+  FiCreditCard,
+  FiUserCheck,
 } from 'react-icons/fi';
 import Button from '../components/Button';
 import TiltCard from '../components/TiltCard';
@@ -79,7 +82,7 @@ const LandingPage = () => {
     {
       type: 'safe',
       title: 'Verified & Safe',
-      description: 'Every host is verified. Secure payments, insurance coverage, and transparent booking terms.',
+      description: 'Verified profiles, secure in-app payments, and transparent booking terms for both sides.',
     },
     {
       type: 'speed',
@@ -97,13 +100,13 @@ const LandingPage = () => {
     {
       step: '01',
       title: 'Browse & Search',
-      description: 'Explore thousands of items in your city. Filter by category, price, location, and ratings.',
+      description: 'Explore items near you. Filter by category, price, location, and ratings.',
       icon: FiSearch,
     },
     {
       step: '02',
-      title: 'Book Instantly',
-      description: 'Select dates, add to cart, and complete payment securely. Get instant confirmation.',
+      title: 'Book & Pay',
+      description: 'Select dates, add to cart, and pay securely. Your booking confirms as soon as the payment is verified.',
       icon: FiCheckCircle,
     },
     {
@@ -121,19 +124,46 @@ const LandingPage = () => {
   ];
 
   const hostBenefits = [
-    { text: 'Earn passive income from items you own', icon: FiDollarSign },
-    { text: 'Maximum security with verified renters', icon: FiShield },
+    { text: 'Earn income from items you already own', icon: FiDollarSign },
+    { text: 'Verify every renter before handover', icon: FiShield },
     { text: 'Flexible rental terms and pricing control', icon: FiClock },
-    { text: 'Build your superhost reputation', icon: FiTrendingUp },
-    { text: 'Access to local community of 10k+ users', icon: FiUsers },
-    { text: 'Insurance coverage for all rentals', icon: FiCheckCircle },
+    { text: 'Photo + signature evidence at handover', icon: FiCamera },
+    { text: 'Message renters directly in the app', icon: FiUsers },
+    { text: 'You approve every booking request', icon: FiCheckCircle },
   ];
 
-  const stats = [
-    { value: '10K+', label: 'Active Users', icon: FiUsers },
-    { value: '5000+', label: 'Items Listed', icon: FiTarget },
-    { value: '₹2Cr+', label: 'Transaction Value', icon: FiTrendingUp },
-    { value: '4.8★', label: 'Avg Rating', icon: FiSmile },
+  /**
+   * Hero highlights. These describe things the product actually does, so they
+   * can be shown without inflating them the way a user/listing counter would.
+   */
+  const heroHighlights = [
+    { icon: FiShield, title: 'Verified handover', desc: 'Photo and OTP sign-off at pickup and return.' },
+    { icon: FiCreditCard, title: 'Secure payments', desc: 'Pay by UPI QR today, cards rolling out shortly.' },
+    { icon: FiClock, title: 'Rent flexibly', desc: 'By the hour, the day, or the month — your call.' },
+  ];
+
+  /** Real, shipped safety features — replaces the old fabricated testimonials. */
+  const trustFeatures = [
+    {
+      icon: FiUserCheck,
+      title: 'Handover OTPs',
+      desc: 'A one-time code is exchanged at pickup and at return, so both sides know the item changed hands.',
+    },
+    {
+      icon: FiCamera,
+      title: 'Condition evidence',
+      desc: 'Photos and signatures captured at handover are stored on the booking and visible to both parties.',
+    },
+    {
+      icon: FiFileText,
+      title: 'Rental agreement',
+      desc: 'Every confirmed booking comes with a downloadable agreement PDF covering dates, amounts, and terms.',
+    },
+    {
+      icon: FiLock,
+      title: 'Deposit options',
+      desc: 'Hosts take a cash deposit or an agreed collateral, recorded on the booking before pickup.',
+    },
   ];
 
   return (
@@ -177,15 +207,25 @@ const LandingPage = () => {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-5 sm:pt-6 border-t border-slate-200/60">
-                {stats.map((stat) => (
-                  <div key={stat.label} className="text-left">
-                    <p className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                      {stat.value}
-                    </p>
-                    <p className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-slate-400 mt-0.5 sm:mt-1 leading-none">{stat.label}</p>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-5 sm:pt-6 border-t border-slate-200/60">
+                {heroHighlights.map((item, idx) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.title}
+                      className="reveal flex items-start gap-3 rounded-2xl bg-white/60 border border-slate-200/60 px-3.5 py-3 backdrop-blur-sm hover:border-blue-500/25 hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-0.5 transition-all duration-300"
+                      style={{ animationDelay: `${(idx * 0.16 + 0.15).toFixed(2)}s`, animationFillMode: 'both' }}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <Icon size={15} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800">{item.title}</p>
+                        <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{item.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -345,7 +385,7 @@ const LandingPage = () => {
 
             {/* 3D Chart — hidden on mobile, shown on lg+ */}
             <div className="hidden lg:block lg:col-span-6 w-full">
-              <WebGLErrorBoundary fallback={<div className="w-full h-96 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/50"><p className="text-sm text-slate-400">Earnings chart unavailable</p></div>}>
+              <WebGLErrorBoundary fallback={<div className="w-full h-96 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/50"><p className="text-sm text-slate-400">Hosting flow unavailable</p></div>}>
                 <Earnings3DChart />
               </WebGLErrorBoundary>
             </div>
@@ -353,63 +393,38 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Social Proof / Trust Section */}
+      {/* Trust / Safety — describes the checks that are actually built in */}
       <section className="py-10 sm:py-16 md:py-24 relative px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8 sm:mb-16">
             <span className="eyebrow !bg-purple-50 !text-purple-700 !border-purple-200/60 mb-3 sm:mb-4">
-              Trusted Community
+              Built for Trust
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 mb-4 sm:mb-6 tracking-tight">
-              Loved by Our Community
+              Every Rental, Documented
             </h2>
             <p className="text-sm sm:text-lg text-slate-500 max-w-2xl mx-auto">
-              Real stories from real users.
+              Handovers are verified on both ends, so a rental rarely turns into a he-said-she-said.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-            {[
-              {
-                name: 'Priya Kumar',
-                role: 'Camera Host',
-                testimonial: 'I was skeptical at first, but Rentrex made it so easy. Earned ₹15k in my first month just renting out my DSLR camera!',
-                rating: 5,
-              },
-              {
-                name: 'Arjun Singh',
-                role: 'Frequent Renter',
-                testimonial: 'No more buying expensive equipment I use occasionally. Found a professional camera setup for just ₹500/day. Amazing!',
-                rating: 5,
-              },
-              {
-                name: 'Meera Patel',
-                role: 'Host & Renter',
-                testimonial: 'The security measures and verified community give me full confidence. Both as a host and renter, I feel protected.',
-                rating: 5,
-              },
-            ].map((testimonial, idx) => (
-              <TiltCard key={idx} max={6}>
-                <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white/70 border border-slate-200/50 hover:border-purple-500/20 hover:shadow-xl hover:shadow-purple-500/5 transition-all duration-300 h-full flex flex-col backdrop-blur-md">
-                  <div className="mb-4">
-                    {Array(testimonial.rating)
-                      .fill(0)
-                      .map((_, i) => (
-                        <span key={i} className="text-yellow-400 text-base">
-                          ★
-                        </span>
-                      ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {trustFeatures.map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.title}
+                  className="reveal p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/70 border border-slate-200/50 hover:border-purple-500/25 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col backdrop-blur-md"
+                  style={{ animationDelay: `${(idx * 0.12).toFixed(2)}s`, animationFillMode: 'both' }}
+                >
+                  <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 sm:mb-5">
+                    <Icon size={20} />
                   </div>
-                  <p className="text-slate-600 flex-grow mb-6 leading-relaxed italic text-sm">
-                    "{testimonial.testimonial}"
-                  </p>
-                  <div className="border-t border-slate-100 pt-4">
-                    <p className="font-bold text-slate-800 text-sm">{testimonial.name}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{testimonial.role}</p>
-                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800 mb-2">{item.title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed flex-grow">{item.desc}</p>
                 </div>
-              </TiltCard>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

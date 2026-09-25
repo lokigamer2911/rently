@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
-import { FiFileText, FiStar, FiClock, FiDownload, FiInfo, FiMapPin, FiCamera, FiX, FiActivity } from 'react-icons/fi';
+import { FiFileText, FiStar, FiClock, FiDownload, FiInfo, FiMapPin, FiCamera, FiX, FiActivity, FiCreditCard } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
 import Button from '../../components/Button';
 import HandoverModal from '../../components/HandoverModal';
 import ReviewModal from '../../components/ReviewModal';
 import ConditionTimeline from '../../components/ConditionTimeline';
+import UpiPaymentModal from '../../components/UpiPaymentModal';
 import { generateAgreement } from '../../lib/pdf';
 import { useAuth } from '../../hooks/useAuth';
 import TiltCard from '../../components/TiltCard';
@@ -22,6 +23,34 @@ export default function Bookings() {
   const [timelineBooking, setTimelineBooking] = useState(null); // { id, title }
   const { user } = useAuth();
   const { data: list, mutate } = useSWR(tab === 'mine' ? '/bookings/mine' : '/bookings/incoming', fetcher);
+
+  // Lets a renter resume a QR payment they abandoned mid-checkout.
+  const [razorpayEnabled, setRazorpayEnabled] = useState(null);
+  const [upiIntent, setUpiIntent] = useState(null);
+  const [upiOpen, setUpiOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/payments/config')
+      .then(({ data }) => { if (!cancelled) setRazorpayEnabled(Boolean(data.razorpayEnabled)); })
+      .catch(() => { if (!cancelled) setRazorpayEnabled(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const resumeUpiPayment = async (booking) => {
+    try {
+      const { data: intent } = await api.post('/payments/upi/intent', { bookingId: booking.id });
+      if (intent.alreadyPaid) {
+        toast.success('This booking is already paid');
+        mutate();
+        return;
+      }
+      setUpiIntent(intent);
+      setUpiOpen(true);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not load the payment details');
+    }
+  };
 
   const update = async (id, status) => {
     try {
@@ -107,6 +136,19 @@ export default function Bookings() {
                   <p className="text-xs font-bold text-brand-700 mt-2 bg-brand-50 px-2 py-0.5 rounded-full w-fit">
                     Rs {(b.totalAmount / 100).toLocaleString()}
                   </p>
+                  {tab === 'mine' && b.status === 'PENDING' && b.payment && (
+                    <p className={`text-[10px] font-bold mt-1.5 ${
+                      b.payment.status === 'AWAITING_VERIFICATION' ? 'text-amber-600'
+                        : b.payment.status === 'REJECTED' ? 'text-red-600'
+                          : 'text-slate-400'
+                    }`}>
+                      {b.payment.status === 'AWAITING_VERIFICATION'
+                        ? 'Payment submitted — verifying'
+                        : b.payment.status === 'REJECTED'
+                          ? 'Payment not matched — please retry'
+                          : 'Payment pending'}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -226,6 +268,16 @@ export default function Bookings() {
                   )}
                   {tab === 'mine' && b.status === 'PENDING' && (
                     <Button variant="ghost" className="!py-2.5 !px-4 text-red-600 hover:bg-red-50" onClick={() => handleCancel(b)}>Cancel Request</Button>
+                  )}
+                  {tab === 'mine' && b.status === 'PENDING' && razorpayEnabled === false && (
+                    <Button
+                      variant="primary"
+                      className="!py-2.5 !px-5 flex items-center gap-2"
+                      onClick={() => resumeUpiPayment(b)}
+                    >
+                      <FiCreditCard size={14} />
+                      {b.payment?.status === 'AWAITING_VERIFICATION' ? 'Under review' : 'Pay via UPI QR'}
+                    </Button>
                   )}
                   {b.status === 'COMPLETED' && (
                     <Button variant="ghost" className="!py-2.5 !px-4 flex items-center gap-2 border border-slate-200" onClick={() => setReviewBooking(b)}>
@@ -412,6 +464,13 @@ export default function Bookings() {
           onClose={() => setTimelineBooking(null)}
         />
       )}
+
+      <UpiPaymentModal
+        isOpen={upiOpen}
+        intent={upiIntent}
+        onClose={() => { setUpiOpen(false); setUpiIntent(null); mutate(); }}
+        onVerified={() => { setUpiOpen(false); setUpiIntent(null); mutate(); }}
+      />
     </div>
   );
 }

@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { FiTrash2, FiShoppingCart, FiShield, FiCheckCircle } from 'react-icons/fi';
+import { FiTrash2, FiShoppingCart, FiShield, FiCheckCircle, FiCreditCard } from 'react-icons/fi';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
 import Button from '../components/Button';
 import TermsModal from '../components/TermsModal';
 import TiltCard from '../components/TiltCard';
+import UpiPaymentModal from '../components/UpiPaymentModal';
 
 export default function Cart() {
   const { cart, removeFromCart, clearCart } = useCart();
@@ -17,6 +18,40 @@ export default function Cart() {
   const [bookingDates, setBookingDates] = useState({});
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+
+  // Payment mode is decided by the backend so the gateway can be switched on
+  // with an env var, with no frontend deploy.
+  const [upiIntent, setUpiIntent] = useState(null);
+  const [upiOpen, setUpiOpen] = useState(false);
+  const [razorpayEnabled, setRazorpayEnabled] = useState(null);
+  const upiResolverRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/payments/config')
+      .then(({ data }) => { if (!cancelled) setRazorpayEnabled(Boolean(data.razorpayEnabled)); })
+      .catch(() => { if (!cancelled) setRazorpayEnabled(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  /**
+   * Show the UPI QR modal for one booking and settle once the renter has either
+   * been verified or dismissed it. Resolves false when they walked away, so the
+   * caller can leave the booking pending instead of marking it paid.
+   */
+  const payViaUpi = (intent) => new Promise((resolve) => {
+    upiResolverRef.current = resolve;
+    setUpiIntent(intent);
+    setUpiOpen(true);
+  });
+
+  const closeUpiModal = (verified) => {
+    setUpiOpen(false);
+    setUpiIntent(null);
+    const resolve = upiResolverRef.current;
+    upiResolverRef.current = null;
+    resolve?.(verified);
+  };
 
   const getLocalDatetime = (date = new Date()) => {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -97,7 +132,8 @@ export default function Cart() {
       return;
     }
 
-    if (typeof window === 'undefined' || !window.Razorpay) {
+    // Razorpay checkout.js is only needed when the gateway is actually live.
+    if (razorpayEnabled && (typeof window === 'undefined' || !window.Razorpay)) {
       toast.error('Payment gateway is still loading. Please try again.');
       return;
     }
@@ -109,7 +145,7 @@ export default function Cart() {
 
     setIsCheckingOut(true);
     try {
-      const successfulItems = [];
+      const paidItems = [];
       for (const item of cart) {
         const dates = bookingDates[item.id];
         const { data: booking } = await api.post('/bookings', {
@@ -119,14 +155,34 @@ export default function Cart() {
           depositType: dates.depositType || 'CASH',
           depositNote: dates.depositNote || '',
         });
-        const { data: order } = await api.post('/payments/order', { bookingId: booking.id });
 
-        await openCheckout(item, order);
-        successfulItems.push(item.id);
+        if (razorpayEnabled) {
+          const { data: order } = await api.post('/payments/order', { bookingId: booking.id });
+          await openCheckout(item, order);
+          paidItems.push(item.id);
+          continue;
+        }
+
+        const { data: intent } = await api.post('/payments/upi/intent', { bookingId: booking.id });
+        if (intent.alreadyPaid) {
+          paidItems.push(item.id);
+          continue;
+        }
+
+        const verified = await payViaUpi(intent);
+        if (!verified) {
+          // Booking is saved and sits as payment-pending — let them finish later.
+          toast(
+            `${item.title} is booked, but payment is still pending. You can finish it any time from My Bookings.`,
+            { icon: '⏳', duration: 7000 },
+          );
+          break;
+        }
+        paidItems.push(item.id);
       }
 
-      successfulItems.forEach((id) => removeFromCart(id));
-      router.push('/bookings');
+      paidItems.forEach((id) => removeFromCart(id));
+      if (paidItems.length) router.push('/bookings');
     } catch (e) {
       const message = e.response?.data?.error || e.message || 'Checkout failed';
       toast.error(message);
@@ -264,6 +320,21 @@ export default function Cart() {
             </div>
           </div>
 
+          {razorpayEnabled === false && (
+            <div className="bg-amber-50 border border-amber-100 rounded-[1.2rem] p-4 flex items-center gap-3">
+              <div className="h-8 w-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shrink-0">
+                <FiCreditCard size={16} />
+              </div>
+              <div className="text-xs">
+                <p className="font-bold text-amber-900 uppercase tracking-wider">Razorpay integration is in progress</p>
+                <p className="text-amber-700 mt-0.5">
+                  Card and netbanking checkout is coming soon. Pay to our UPI QR code instead — your booking is
+                  confirmed as soon as the payment is verified.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2 border-b border-slate-100 pb-4">
             <div className="flex justify-between text-sm text-slate-600">
               <span>Rental Subtotal</span>
@@ -292,7 +363,11 @@ export default function Cart() {
             disabled={isCheckingOut} 
             type="button"
           >
-            {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
+            {isCheckingOut
+              ? 'Processing...'
+              : razorpayEnabled === false
+                ? `Pay Rs ${totalPrice.toFixed(2)} via UPI QR`
+                : 'Proceed to Checkout'}
           </Button>
         </div>
       </div>
@@ -305,6 +380,13 @@ export default function Cart() {
           setShowTerms(false);
           proceedToCheckout();
         }} 
+      />
+
+      <UpiPaymentModal
+        isOpen={upiOpen}
+        intent={upiIntent}
+        onClose={() => closeUpiModal(false)}
+        onVerified={() => closeUpiModal(true)}
       />
     </>
   );

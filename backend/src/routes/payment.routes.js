@@ -4,8 +4,15 @@ const prisma = require('../config/prisma');
 const razorpay = require('../config/razorpay');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
-const { createNotification } = require('../utils/notifications');
 const logger = require('../utils/logger');
+const qr = require('../utils/qr');
+const upi = require('../config/upi');
+const {
+  METHOD,
+  STATUS,
+  settlePayment,
+  submitUpiClaim,
+} = require('../services/payment.service');
 
 const createSignature = (payload, secret) => {
   const normalizedPayload = Buffer.isBuffer(payload) ? payload : Buffer.from(typeof payload === 'string' ? payload : JSON.stringify(payload));
@@ -54,74 +61,202 @@ const normalizeWebhookEvent = (event) => {
   return null;
 };
 
-const notifyBookingConfirmation = async (booking, io) => {
-  if (!booking) return;
+/**
+ * Which payment method checkout should use right now.
+ * This is what drives the "Razorpay integration is in progress" notice.
+ */
+router.get('/config', (_req, res) => {
+  const razorpayEnabled = upi.isRazorpayEnabled();
+  const upiEnabled = upi.isUpiQrEnabled();
 
-  await createNotification(io, {
-    userId: booking.renterId,
-    type: 'BOOKING_UPDATE',
-    title: 'Payment confirmed ✅',
-    body: `Your booking for ${booking.listing.title} is now confirmed.`,
-    link: '/bookings',
+  res.json({
+    method: razorpayEnabled ? METHOD.RAZORPAY : METHOD.UPI_QR,
+    razorpayEnabled,
+    upiQrEnabled: upiEnabled,
+    notice: razorpayEnabled ? null : upi.RAZORPAY_PENDING_NOTICE,
+    supportContact: upi.getSupportContact(),
+    payeeCount: upi.getPayees().length,
   });
+});
 
-  await createNotification(io, {
-    userId: booking.listing.ownerId,
-    type: 'BOOKING_UPDATE',
-    title: 'Booking confirmed ✅',
-    body: `A booking for ${booking.listing.title} has been confirmed and paid.`,
-    link: '/bookings',
-  });
-};
-
-const confirmBooking = async ({ razorpayOrderId, razorpayPaymentId, razorpaySignature, io }) => {
+/**
+ * Build (or re-fetch) the UPI payment intent for a booking.
+ *
+ * Nothing is charged here — we hand back a deep link and a QR encoding the
+ * exact amount plus a unique reference, then wait for a human to confirm the
+ * credit landed. See POST /upi/claim.
+ */
+router.post('/upi/intent', requireAuth, async (req, res, next) => {
   try {
-    const payment = await prisma.payment.findUnique({ where: { razorpayOrderId } });
-    if (!payment) return { ok: false, reason: 'payment_not_found' };
-    if (payment.status === 'PAID') {
-      return { ok: true, alreadyProcessed: true, bookingId: payment.bookingId };
+    const { bookingId } = z.object({ bookingId: z.string().min(1) }).parse(req.body);
+
+    if (!upi.isUpiQrEnabled()) {
+      return res.status(503).json({
+        error: 'UPI payments are not configured yet. Please contact support.',
+        code: 'UPI_NOT_CONFIGURED',
+      });
     }
 
-    const booking = await prisma.$transaction(async (tx) => {
-      await tx.payment.update({
-        where: { razorpayOrderId },
-        data: { razorpayPaymentId, razorpaySignature, status: 'PAID' },
-      });
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { listing: { select: { title: true } } },
+    });
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    if (booking.renterId !== req.user.id && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
-      const updatedBooking = await tx.booking.update({
-        where: { id: payment.bookingId },
-        data: { status: 'CONFIRMED' },
-      });
+    const existing = await prisma.payment.findUnique({ where: { bookingId } });
+    if (existing?.status === STATUS.PAID) {
+      return res.json({ alreadyPaid: true, status: STATUS.PAID, bookingId });
+    }
 
-      await tx.listing.update({
-        where: { id: updatedBooking.listingId },
-        data: { available: false },
-      });
+    const ref = existing?.upiRef || upi.generateRef();
+    const payees = upi.getPayees();
+    // Keep the UPI ID stable across re-opens; fall back to a fresh pick if the
+    // stored VPA was removed from the config.
+    const payee = payees.find((p) => p.vpa === existing?.upiPayeeVpa) || upi.pickPayee(ref);
+    if (!payee) {
+      return res.status(503).json({ error: 'No UPI payee configured', code: 'UPI_NOT_CONFIGURED' });
+    }
 
-      return updatedBooking;
+    const payment = await prisma.payment.upsert({
+      where: { bookingId },
+      update: {
+        method: METHOD.UPI_QR,
+        amount: booking.totalAmount,
+        upiRef: ref,
+        upiPayeeVpa: payee.vpa,
+        upiPayeeName: payee.name,
+      },
+      create: {
+        bookingId,
+        method: METHOD.UPI_QR,
+        amount: booking.totalAmount,
+        upiRef: ref,
+        upiPayeeVpa: payee.vpa,
+        upiPayeeName: payee.name,
+        status: STATUS.CREATED,
+      },
     });
 
-    const hydratedBooking = await prisma.booking.findUnique({
-      where: { id: booking.id },
-      include: { listing: true, renter: true },
+    const upiLink = upi.buildUpiLink({
+      payee,
+      amountPaise: booking.totalAmount,
+      ref,
+      note: `Rently rent ${ref}`,
     });
 
-    await notifyBookingConfirmation(hydratedBooking, io);
+    res.json({
+      paymentId: payment.id,
+      bookingId,
+      status: payment.status,
+      ref,
+      amount: booking.totalAmount,
+      amountRupees: upi.toRupees(booking.totalAmount),
+      currency: 'INR',
+      payee: { vpa: payee.vpa, name: payee.name, label: payee.label || null },
+      upiLink,
+      qrDataUrl: await qr.toDataUrl(upiLink),
+      staticQrUrl: upi.getStaticQrUrl(),
+      listingTitle: booking.listing?.title || null,
+      supportContact: upi.getSupportContact(),
+      notice: upi.RAZORPAY_PENDING_NOTICE,
+    });
+  } catch (e) { next(e); }
+});
 
-    return { ok: true, alreadyProcessed: false, bookingId: booking.id };
-  } catch (error) {
-    console.warn('Payment confirmation skipped due to Prisma error:', error.message);
-    return { ok: true, alreadyProcessed: true, bookingId: null };
-  }
-};
+/**
+ * Renter says "I've paid" and pastes the UTR/RRN from their UPI app.
+ * This does NOT confirm the booking — an admin still matches it against the
+ * bank credit in /admin → Payments.
+ */
+router.post('/upi/claim', requireAuth, async (req, res, next) => {
+  try {
+    const payload = z.object({
+      paymentId: z.string().min(1),
+      utr: z.string().trim().min(6).max(64),
+      note: z.string().trim().max(500).optional().default(''),
+      proofUrl: z.string().url().max(500).optional().or(z.literal('')).default(''),
+    }).parse(req.body);
 
-// Create Razorpay order for a booking
+    const payment = await prisma.payment.findUnique({ where: { id: payload.paymentId } });
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    const booking = await prisma.booking.findUnique({ where: { id: payment.bookingId } });
+    if (!booking || (booking.renterId !== req.user.id && req.user.role !== 'ADMIN')) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const result = await submitUpiClaim({
+      paymentId: payment.id,
+      utr: payload.utr,
+      note: payload.note,
+      proofUrl: payload.proofUrl,
+      io: req.app.get('io'),
+    });
+
+    if (!result.ok) {
+      const status = result.reason === 'payment_not_found' ? 404 : 409;
+      return res.status(status).json({
+        error: result.reason === 'rejected'
+          ? 'This payment was rejected. Please contact support.'
+          : 'Could not record this payment reference.',
+      });
+    }
+
+    res.json({
+      ok: true,
+      alreadyPaid: Boolean(result.alreadyPaid),
+      status: result.alreadyPaid ? STATUS.PAID : STATUS.AWAITING_VERIFICATION,
+    });
+  } catch (e) { next(e); }
+});
+
+/**
+ * Status poll for the checkout modal, so the renter's screen flips to
+ * "confirmed" the moment an admin verifies the credit.
+ */
+router.get('/upi/:paymentId', requireAuth, async (req, res, next) => {
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: req.params.paymentId },
+      include: { booking: { select: { id: true, status: true, renterId: true, totalAmount: true } } },
+    });
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    const isOwner = payment.booking?.renterId === req.user.id;
+    if (!isOwner && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+
+    res.json({
+      paymentId: payment.id,
+      status: payment.status,
+      ref: payment.upiRef,
+      amount: payment.amount,
+      method: payment.method,
+      utr: payment.payerUtr || null,
+      payeeVpa: payment.upiPayeeVpa || null,
+      rejectionReason: payment.rejectionReason || null,
+      bookingStatus: payment.booking?.status || null,
+      verifiedAt: payment.verifiedAt,
+    });
+  } catch (e) { next(e); }
+});
+
+// Create Razorpay order for a booking — only meaningful once the gateway is live
 router.post('/order', requireAuth, async (req, res, next) => {
   try {
     const { bookingId } = z.object({ bookingId: z.string() }).parse(req.body);
     const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking || booking.renterId !== req.user.id)
       return res.status(403).json({ error: 'Forbidden' });
+
+    if (!upi.isRazorpayEnabled()) {
+      return res.status(503).json({
+        error: upi.RAZORPAY_PENDING_NOTICE,
+        code: 'RAZORPAY_PENDING',
+      });
+    }
 
     const order = await razorpay.orders.create({
       amount: booking.totalAmount,
@@ -132,8 +267,18 @@ router.post('/order', requireAuth, async (req, res, next) => {
 
     await prisma.payment.upsert({
       where: { bookingId },
-      update: { razorpayOrderId: order.id, amount: booking.totalAmount, status: 'CREATED' },
-      create: { bookingId, razorpayOrderId: order.id, amount: booking.totalAmount },
+      update: {
+        razorpayOrderId: order.id,
+        amount: booking.totalAmount,
+        status: STATUS.CREATED,
+        method: METHOD.RAZORPAY,
+      },
+      create: {
+        bookingId,
+        razorpayOrderId: order.id,
+        amount: booking.totalAmount,
+        method: METHOD.RAZORPAY,
+      },
     });
 
     res.json({ orderId: order.id, amount: order.amount, currency: order.currency, key: process.env.RAZORPAY_KEY_ID });
@@ -174,19 +319,22 @@ router.post('/verify', requireAuth, async (req, res, next) => {
           razorpayPaymentId: razorpay_payment_id,
           razorpaySignature: razorpay_signature,
           amount: 0,
-          status: 'CREATED',
+          status: STATUS.CREATED,
+          method: METHOD.RAZORPAY,
         },
       });
     } else if (!existingPayment) {
       return res.status(404).json({ error: 'Payment not found' });
     }
 
+    // A real payment id ending in a signature match already proves the money
+    // moved, so this settles directly (unlike the UPI path, which needs a human).
     const confirmationKey = getConfirmationKey(razorpay_order_id, razorpay_payment_id);
     if (tryMarkProcessed(confirmationKey)) {
       return res.json({ ok: true, message: 'already processed' });
     }
 
-    const confirmation = await confirmBooking({
+    const confirmation = await settlePayment({
       razorpayOrderId: razorpay_order_id,
       razorpayPaymentId: razorpay_payment_id,
       razorpaySignature: razorpay_signature,
@@ -234,7 +382,7 @@ router.post('/webhook', async (req, res) => {
         return res.json({ ok: true, message: 'already processed' });
       }
 
-      const confirmation = await confirmBooking({
+      const confirmation = await settlePayment({
         razorpayOrderId: orderId,
         razorpayPaymentId: payload.id,
         razorpaySignature: 'webhook',
@@ -247,8 +395,8 @@ router.post('/webhook', async (req, res) => {
     } else if (event.event === 'payment.failed') {
       const orderId = event.payload.payment.entity.order_id;
       await prisma.payment.updateMany({
-        where: { razorpayOrderId: orderId, status: { not: 'PAID' } },
-        data: { status: 'FAILED' },
+        where: { razorpayOrderId: orderId, status: { not: STATUS.PAID } },
+        data: { status: STATUS.FAILED },
       });
     }
 
