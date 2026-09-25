@@ -673,3 +673,111 @@
 .dark .bg-white\/95 {
   background: rgba(30, 41, 59, 0.8) !important;
 }
+
+/* ─── Lumi icon tiles: CSS-3D animated icons (landing page) ────────────── */
+.lumi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 320px;
+  flex-shrink: 0;
+}
+
+.lumi-icon__disc {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 30%;
+  background:
+    radial-gradient(120% 120% at 30% 20%, var(--lumi-tint-top) 0%, var(--lumi-tint-bottom) 55%, rgba(255, 255, 255, 0.65) 100%),
+    linear-gradient(145deg, #ffffff 0%, rgba(248, 250, 252, 0.92) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 6px rgba(15, 23, 42, 0.05),
+    0 6px 14px -6px var(--lumi-shadow),
+    0 2px 4px -2px rgba(15, 23, 42, 0.08);
+  transform-style: preserve-3d;
+  animation: lumi-float 5.2s ease-in-out infinite;
+  transition:
+    transform 0.45s cubic-bezier(0.19, 1, 0.22, 1),
+    box-shadow 0.45s cubic-bezier(0.19, 1, 0.22, 1);
+  overflow: hidden;
+}
+
+@keyframes lumi-float {
+  0%, 100% { transform: translateY(0) rotateX(4deg) rotateY(-4deg); }
+  50% { transform: translateY(-3px) rotateX(-3deg) rotateY(3deg); }
+}
+
+.lumi-icon__glyph {
+  display: inline-flex;
+  transform-style: preserve-3d;
+  color: var(--lumi-color);
+  filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.18));
+  transition: transform 0.45s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.lumi-icon__shine {
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    115deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 58%
+  );
+  transform: translateX(-80%);
+  pointer-events: none;
+}
+
+.lumi-icon[data-hovered='true'] .lumi-icon__disc {
+  animation-play-state: paused;
+  transform: translateY(-4px) scale(1.08);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -2px 6px rgba(15, 23, 42, 0.06),
+    0 18px 30px -10px var(--lumi-shadow),
+    0 4px 10px -4px rgba(15, 23, 42, 0.1);
+}
+
+.lumi-icon[data-hovered='true'] .lumi-icon__shine {
+  animation: lumi-sweep 0.9s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+@keyframes lumi-sweep {
+  from { transform: translateX(-80%); }
+  to { transform: translateX(80%); }
+}
+
+.dark .lumi-icon__disc {
+  background:
+    radial-gradient(120% 120% at 30% 20%, var(--lumi-tint-top) 0%, var(--lumi-tint-bottom) 55%, rgba(30, 41, 59, 0.9) 100%),
+    linear-gradient(145deg, rgba(51, 65, 85, 0.9) 0%, rgba(30, 41, 59, 0.95) 100%);
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.08),
+    0 6px 16px -6px var(--lumi-shadow);
+}
+
+.dark .lumi-icon__glyph {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45)) brightness(1.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lumi-icon__disc,
+  .lumi-icon__glyph,
+  .lumi-icon__shine {
+    animation: none !important;
+    transition: none !important;
+  }
+  .lumi-icon__glyph {
+    transform: translateZ(10px) !important;
+  }
+  .lumi-icon[data-hovered='true'] .lumi-icon__disc {
+    transform: scale(1.05) !important;
+  }
+}
