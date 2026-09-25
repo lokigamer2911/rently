@@ -7,6 +7,11 @@ const { z } = require('zod');
 const { createNotification, notifyWaitlist } = require('../utils/notifications');
 const { sendBookingRequestEmail } = require('../utils/email');
 const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
+const {
+  buildSignatureEvidence,
+  parseSignatureEvidence,
+  verifySignatureEvidence,
+} = require('../utils/signatureEvidence');
 
 const CUID_RE = /^[a-z0-9]{20,}$/i;
 function validateId(req, res, next) {
@@ -332,12 +337,34 @@ router.patch('/:id/pickup', requireAuth, validateId, otpVerifyLimiter, async (re
 
     const returnOTP = generateOTP();
 
+    // E-signature evidence: validate the captured data URLs and record
+    // who signed, when, from which IP and device. Rejected entries are
+    // reported back so the UI can ask the user to re-sign.
+    const evidence = buildSignatureEvidence({ req, signatures, photos });
+    if (evidence.accepted.length === 0) {
+      return res.status(400).json({
+        error: 'No valid signature could be stored',
+        rejectedSignatures: evidence.rejected,
+      });
+    }
+
     const updated = await prisma.booking.update({
       where: { id: req.params.id },
       data: {
         status: 'PICKED_UP',
         pickupPhotos: JSON.stringify(photos),
-        pickupSignatures: JSON.stringify(signatures || {}),
+        pickupSignatures: JSON.stringify(
+          Object.fromEntries(evidence.accepted.map(role => [role, evidence.envelope.parties[role].signature]))
+        ),
+        pickupSignatureMeta: JSON.stringify({
+          // Full evidence envelope: hash, per-party signedAt/ip/userAgent.
+          // Kept separate from pickupSignatures so legacy consumers that parse
+          // pickupSignatures as { renter, host } keep working unchanged.
+          envelope: evidence.envelope,
+          accepted: evidence.accepted,
+          rejected: evidence.rejected,
+          chainedFrom: null,
+        }),
         handoverAt: new Date(),
         returnOTP
       }
@@ -381,12 +408,39 @@ router.patch('/:id/return', requireAuth, validateId, otpVerifyLimiter, async (re
     const otpResult = verifyOTP(otp, booking.returnOTP);
     if (!otpResult.valid) return res.status(400).json({ error: otpResult.reason });
 
+    // E-signature evidence for the return, chained to the pickup envelope
+    // so rewriting the pickup after the fact invalidates the return too.
+    // The pickup envelope (with its hash) lives in pickupSignatureMeta.
+    let pickupMeta = null;
+    try { pickupMeta = JSON.parse(booking.pickupSignatureMeta || 'null'); } catch (err) { pickupMeta = null; }
+    const pickupEnvelope = (pickupMeta && pickupMeta.envelope) || parseSignatureEvidence(booking.pickupSignatures);
+    const evidence = buildSignatureEvidence({
+      req,
+      signatures,
+      photos,
+      prevHash: pickupEnvelope && pickupEnvelope.hash ? pickupEnvelope.hash : null,
+    });
+    if (evidence.accepted.length === 0) {
+      return res.status(400).json({
+        error: 'No valid signature could be stored',
+        rejectedSignatures: evidence.rejected,
+      });
+    }
+
     const updated = await prisma.booking.update({
       where: { id: req.params.id },
       data: {
         status: 'COMPLETED',
         returnPhotos: JSON.stringify(photos),
-        returnSignatures: JSON.stringify(signatures || {}),
+        returnSignatures: JSON.stringify(
+          Object.fromEntries(evidence.accepted.map(role => [role, evidence.envelope.parties[role].signature]))
+        ),
+        returnSignatureMeta: JSON.stringify({
+          envelope: evidence.envelope,
+          accepted: evidence.accepted,
+          rejected: evidence.rejected,
+          chainedFrom: evidence.envelope.prevHash,
+        }),
         returnAt: new Date()
       }
     });
@@ -429,18 +483,16 @@ router.get('/:id/timeline', requireAuth, validateId, async (req, res, next) => {
     const pickupPhotos = parseJsonArray(booking.pickupPhotos);
     const returnPhotos = parseJsonArray(booking.returnPhotos);
 
-    let pickupSignatures = null;
-    let returnSignatures = null;
-    try {
-      pickupSignatures = JSON.parse(booking.pickupSignatures || '{}');
-    } catch (err) {
-      pickupSignatures = {};
-    }
-    try {
-      returnSignatures = JSON.parse(booking.returnSignatures || '{}');
-    } catch (err) {
-      returnSignatures = {};
-    }
+    // Signature evidence: the authoritative envelope (hash, per-party audit)
+    // lives in *SignatureMeta; older bookings only have the bare {renter, host}
+    // blob in pickupSignatures/returnSignatures.
+    let pickupMeta = null;
+    let returnMeta = null;
+    try { pickupMeta = JSON.parse(booking.pickupSignatureMeta || 'null'); } catch (err) { pickupMeta = null; }
+    try { returnMeta = JSON.parse(booking.returnSignatureMeta || 'null'); } catch (err) { returnMeta = null; }
+
+    const pickupEnvelope = (pickupMeta && pickupMeta.envelope) || parseSignatureEvidence(booking.pickupSignatures);
+    const returnEnvelope = (returnMeta && returnMeta.envelope) || parseSignatureEvidence(booking.returnSignatures);
 
     const events = [];
 
@@ -497,7 +549,14 @@ router.get('/:id/timeline', requireAuth, validateId, async (req, res, next) => {
       timestamp: booking.handoverAt || null,
       actor: { role: 'Host', name: booking.listing.owner.name, avatarUrl: booking.listing.owner.avatarUrl },
       photos: pickupPhotos,
-      signatures: pickupSignatures,
+      signatures: pickupEnvelope ? pickupEnvelope.parties : {},
+      signatureEvidence: pickupEnvelope ? {
+        signedAt: pickupMeta && pickupMeta.signedAt,
+        ip: pickupEnvelope.parties.renter?.ip || pickupEnvelope.parties.host?.ip || null,
+        userAgent: pickupEnvelope.parties.renter?.userAgent || pickupEnvelope.parties.host?.userAgent || null,
+        hash: pickupEnvelope.hash,
+        verified: verifySignatureEvidence(pickupEnvelope),
+      } : null,
       status: pickedUpStatuses.includes(booking.status) ? 'done' : 'pending',
     });
 
@@ -512,7 +571,15 @@ router.get('/:id/timeline', requireAuth, validateId, async (req, res, next) => {
       timestamp: booking.returnAt || null,
       actor: { role: 'Host', name: booking.listing.owner.name, avatarUrl: booking.listing.owner.avatarUrl },
       photos: returnPhotos,
-      signatures: returnSignatures,
+      signatures: returnEnvelope ? returnEnvelope.parties : {},
+      signatureEvidence: returnEnvelope ? {
+        signedAt: returnMeta && returnMeta.signedAt,
+        ip: returnEnvelope.parties.renter?.ip || returnEnvelope.parties.host?.ip || null,
+        userAgent: returnEnvelope.parties.renter?.userAgent || returnEnvelope.parties.host?.userAgent || null,
+        hash: returnEnvelope.hash,
+        chainedFrom: returnEnvelope.prevHash,
+        verified: verifySignatureEvidence(returnEnvelope),
+      } : null,
       status: booking.status === 'COMPLETED' ? 'done' : 'pending',
     });
 

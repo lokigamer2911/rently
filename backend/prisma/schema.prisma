@@ -118,8 +118,12 @@ model Booking {
   returnOTP   String?
   pickupPhotos String   @default("[]")
   returnPhotos String   @default("[]")
+  // JSON evidence envelopes: { version, parties: { renter/host: { signature, signedAt, ip, userAgent } }, photos, prevHash, hash }
   pickupSignatures String @default("{}")
   returnSignatures String @default("{}")
+  // Audit summary per handover: { accepted: [], rejected: [], chainedFrom: hash|null }
+  pickupSignatureMeta String?
+  returnSignatureMeta String?
   handoverAt  DateTime?
   returnAt    DateTime?
 

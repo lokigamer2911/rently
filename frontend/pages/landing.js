@@ -19,6 +19,7 @@ import {
 } from 'react-icons/fi';
 import Button from '../components/Button';
 import TiltCard from '../components/TiltCard';
+import AnimatedIcon from '../components/AnimatedIcon';
 import WebGLErrorBoundary from '../components/WebGLErrorBoundary';
 
 // Dynamically load client-side WebGL elements to prevent hydration issues
@@ -209,16 +210,13 @@ const LandingPage = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-5 sm:pt-6 border-t border-slate-200/60">
                 {heroHighlights.map((item, idx) => {
-                  const Icon = item.icon;
                   return (
                     <div
                       key={item.title}
                       className="reveal flex items-start gap-3 rounded-2xl bg-white/60 border border-slate-200/60 px-3.5 py-3 backdrop-blur-sm hover:border-blue-500/25 hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-0.5 transition-all duration-300"
                       style={{ animationDelay: `${(idx * 0.16 + 0.15).toFixed(2)}s`, animationFillMode: 'both' }}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <Icon size={15} />
-                      </div>
+                      <AnimatedIcon icon={item.icon} tone="blue" size="sm" delay={`${(idx * -0.9).toFixed(1)}s`} />
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-800">{item.title}</p>
                         <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{item.desc}</p>
@@ -359,12 +357,9 @@ const LandingPage = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {hostBenefits.map((benefit, idx) => {
-                  const Icon = benefit.icon;
                   return (
                     <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow transition-shadow">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Icon size={16} />
-                      </div>
+                      <AnimatedIcon icon={benefit.icon} tone="emerald" size="sm" delay={`${(idx * -0.8).toFixed(1)}s`} />
                       <p className="text-slate-700 text-xs sm:text-sm font-semibold truncate">{benefit.text}</p>
                     </div>
                   );
@@ -410,15 +405,14 @@ const LandingPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {trustFeatures.map((item, idx) => {
-              const Icon = item.icon;
               return (
                 <div
                   key={item.title}
                   className="reveal p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/70 border border-slate-200/50 hover:border-purple-500/25 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col backdrop-blur-md"
                   style={{ animationDelay: `${(idx * 0.12).toFixed(2)}s`, animationFillMode: 'both' }}
                 >
-                  <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 sm:mb-5">
-                    <Icon size={20} />
+                  <div className="mb-4 sm:mb-5">
+                    <AnimatedIcon icon={item.icon} tone="purple" size="md" delay={`${(idx * -0.7).toFixed(1)}s`} />
                   </div>
                   <h3 className="text-base sm:text-lg font-bold text-slate-800 mb-2">{item.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed flex-grow">{item.desc}</p>

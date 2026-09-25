@@ -125,8 +125,12 @@ function PhotoGrid({ photos, label }) {
 
 // ─── Signatures ─────────────────────────────────────────────────────────────
 
-function SignaturePanel({ signatures, label }) {
+function SignaturePanel({ signatures, label, evidence }) {
   if (!signatures || (!signatures.renter && !signatures.host)) return null;
+  // Signature entries are objects ({ signature, signedAt, ip }) on new bookings
+  // and bare data-URL strings on bookings created before the audit trail.
+  const srcOf = (s) => (typeof s === 'string' ? s : s?.signature);
+  const whenOf = (s) => (typeof s === 'object' && s?.signedAt ? new Date(s.signedAt).toLocaleString() : null);
   return (
     <div className="mt-4 rounded-2xl bg-slate-950/90 border border-white/5 p-4 space-y-3">
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
@@ -137,16 +141,33 @@ function SignaturePanel({ signatures, label }) {
         {signatures.renter && (
           <div className="rounded-xl border border-white/8 p-2 text-center">
             <p className="text-[9px] font-bold text-slate-500 uppercase mb-2">Renter</p>
-            <img src={signatures.renter} alt="Renter sig" className="max-h-14 mx-auto object-contain" />
+            <img src={srcOf(signatures.renter)} alt="Renter sig" className="max-h-14 mx-auto object-contain" />
+            {whenOf(signatures.renter) && (
+              <p className="text-[8px] text-slate-500 mt-1">Signed {whenOf(signatures.renter)}</p>
+            )}
           </div>
         )}
         {signatures.host && (
           <div className="rounded-xl border border-white/8 p-2 text-center">
             <p className="text-[9px] font-bold text-slate-500 uppercase mb-2">Host</p>
-            <img src={signatures.host} alt="Host sig" className="max-h-14 mx-auto object-contain" />
+            <img src={srcOf(signatures.host)} alt="Host sig" className="max-h-14 mx-auto object-contain" />
+            {whenOf(signatures.host) && (
+              <p className="text-[8px] text-slate-500 mt-1">Signed {whenOf(signatures.host)}</p>
+            )}
           </div>
         )}
       </div>
+      {evidence && (
+        <p className="text-[8px] text-slate-600 leading-relaxed">
+          {evidence.ip && <>IP {evidence.ip} · </>}
+          {evidence.hash && <>Evidence {String(evidence.hash).slice(0, 10)}… · </>}
+          {evidence.verified === false ? (
+            <span className="text-red-500 font-bold">Integrity check FAILED — do not rely on this record</span>
+          ) : (
+            <span className="text-emerald-500">Integrity verified</span>
+          )}
+        </p>
+      )}
     </div>
   );
 }
@@ -274,7 +295,7 @@ function EventCard({ event, isLast, index }) {
           {expanded && (
             <div className="px-4 pb-4 space-y-1 border-t border-slate-50 pt-4">
               <PhotoGrid photos={event.photos} label="Condition Photos" />
-              <SignaturePanel signatures={event.signatures} label={event.type === 'PICKUP' ? 'Pickup' : 'Return'} />
+              <SignaturePanel signatures={event.signatures} label={event.type === 'PICKUP' ? 'Pickup' : 'Return'} evidence={event.signatureEvidence} />
             </div>
           )}
         </div>

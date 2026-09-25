@@ -39,7 +39,7 @@ const KNOWLEDGE_BASE = [
   },
   {
     keywords: ['digilocker', 'verify', 'verification', 'id', 'safety', 'secure', 'trust'],
-    response: "We take safety seriously. 🛡️ Our DigiLocker integration verifies your identity via official records in seconds. This creates a high-trust environment where owners feel safe sharing gear. You only need to verify once!"
+    response: "Every account signs up through verified Google or email authentication, and we pair that with condition photos, OTP handovers, and signed digital agreements for every rental. This creates a high-trust environment where owners feel safe sharing gear.",
   },
   {
     keywords: ['pay', 'payment', 'razorpay', 'money', 'deposit', 'security', 'cash', 'collateral', 'id proof'],
@@ -110,7 +110,7 @@ export default function Help() {
     }
 
     return bestMatch || {
-      response: "That's a great question! I'm still learning some of the finer details, but I can definitely tell you all about our 'Security Collateral', 'DigiLocker verification', or how to 'List your gear'. Which one interests you?",
+      response: "That's a great question! I'm still learning some of the finer details, but I can definitely tell you all about our 'Security Collateral', 'account verification', or how to 'List your gear'. Which one interests you?",
       actions: [{ label: 'View All Help', href: '/help' }]
     };
   };
@@ -166,7 +166,7 @@ export default function Help() {
             <div className="grid gap-3">
               {[
                 { icon: <FiDownload className="text-brand-600" />, title: "Agreement PDF Guide", bg: "bg-brand-50" },
-                { icon: <FiShield className="text-blue-600" />, title: "DigiLocker Safety", bg: "bg-blue-50" },
+                { icon: <FiShield className="text-blue-600" />, title: "Account Safety", bg: "bg-blue-50" },
                 { icon: <FiActivity className="text-emerald-600" />, title: "Earnings Dashboard", bg: "bg-emerald-50" }
               ].map((item, i) => (
                 <TiltCard key={i} max={10} glare={false} className="h-full">

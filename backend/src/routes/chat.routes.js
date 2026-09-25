@@ -23,6 +23,14 @@ router.get('/threads', requireAuth, async (req, res, next) => {
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1
+        },
+        // Filtered relation count (Prisma 4.3+): unread messages addressed to me
+        _count: {
+          select: {
+            messages: {
+              where: { read: false, senderId: { not: req.user.id } }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -105,6 +113,33 @@ router.post('/threads', requireAuth, async (req, res, next) => {
     });
 
     res.json(thread);
+  } catch (e) { next(e); }
+});
+
+// Mark messages as read — only the recipient can mark their incoming messages.
+// Send { ids: [...] } to mark specific messages, or an empty body to mark all.
+router.patch('/threads/:id/read', requireAuth, validateId, async (req, res, next) => {
+  try {
+    const thread = await prisma.thread.findUnique({
+      where: { id: req.params.id },
+      select: { userAId: true, userBId: true },
+    });
+    if (!thread) return res.status(404).json({ error: 'Thread not found' });
+    if (thread.userAId !== req.user.id && thread.userBId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.filter((id) => typeof id === 'string').slice(0, 100)
+      : [];
+    const where = {
+      threadId: req.params.id,
+      read: false,
+      senderId: { not: req.user.id },
+      ...(ids.length ? { id: { in: ids } } : {}),
+    };
+    const result = await prisma.message.updateMany({ where, data: { read: true } });
+    res.json({ updated: result.count });
   } catch (e) { next(e); }
 });
 

@@ -126,7 +126,18 @@ export default function SignaturePad({ label, onSave }) {
   const saveSignature = () => {
     const canvas = canvasRef.current;
     if (!canvas || !hasDrawn) return;
-    const dataUrl = canvas.toDataURL('image/png');
+    // Downscale to a fixed width so the stored data URL stays small (a few
+    // dozen KB) and comfortably clears the server's 200 KB signature cap
+    // even on high-DPI devices where the raw canvas can be enormous.
+    const MAX_WIDTH = 800;
+    const scale = Math.min(1, MAX_WIDTH / canvas.width);
+    const out = document.createElement('canvas');
+    out.width = Math.max(1, Math.round(canvas.width * scale));
+    out.height = Math.max(1, Math.round(canvas.height * scale));
+    const outCtx = out.getContext('2d');
+    outCtx.imageSmoothingEnabled = true;
+    outCtx.drawImage(canvas, 0, 0, out.width, out.height);
+    const dataUrl = out.toDataURL('image/png');
     setIsSaved(true);
     onSave(dataUrl);
     triggerHaptic(30);

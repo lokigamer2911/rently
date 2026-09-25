@@ -21,6 +21,11 @@ export default function Navbar() {
   const { data: notifications } = useSWR(user ? '/notifications' : null, fetcher, { refreshInterval: 5000 });
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
+  // Unread chat badge — threads endpoint returns _count.messages filtered to
+  // unread messages addressed to the current user.
+  const { data: threads } = useSWR(user ? '/chat/threads' : null, fetcher, { refreshInterval: 20000 });
+  const unreadChats = threads?.reduce((sum, t) => sum + (t._count?.messages || 0), 0) || 0;
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -68,6 +73,11 @@ export default function Navbar() {
               {links.filter((link) => link.show).map((link) => (
                 <Link key={link.href} href={link.href} className="nav-link">
                   {link.label}
+                  {link.href === '/chat' && unreadChats > 0 && (
+                    <span className="ml-1.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white align-middle">
+                      {unreadChats > 9 ? '9+' : unreadChats}
+                    </span>
+                  )}
                 </Link>
               ))}
             </nav>
@@ -230,8 +240,13 @@ export default function Navbar() {
 
           {user ? (
             <>
-              <Link href="/chat" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/chat') ? 'text-brand-600' : 'text-slate-400'}`}>
+              <Link href="/chat" className={`relative flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/chat') ? 'text-brand-600' : 'text-slate-400'}`}>
                 <FiMessageCircle size={22} />
+                {unreadChats > 0 && (
+                  <span className="absolute top-0 right-2 inline-flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-red-500 px-1 text-[8px] font-bold text-white">
+                    {unreadChats > 9 ? '9+' : unreadChats}
+                  </span>
+                )}
                 <span className="text-[10px] font-semibold">Chat</span>
               </Link>
               <Link href="/bookings" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/bookings') ? 'text-brand-600' : 'text-slate-400'}`}>
