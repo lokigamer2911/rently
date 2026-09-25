@@ -28,6 +28,19 @@ export default function Conversation() {
     if (thread?.messages) setMessages(thread.messages);
   }, [thread]);
 
+  // Read receipts: mark the other side's messages as read while this thread is
+  // open. This feeds the unread badges in the navbar and inbox.
+  useEffect(() => {
+    if (!id || !user || !thread) return;
+    const unread = (thread.messages || []).filter((m) => !m.read && m.senderId !== user.id);
+    if (!unread.length) return;
+    api.patch(`/chat/threads/${id}/read`, { ids: unread.map((m) => m.id) })
+      .then(({ data }) => {
+        if (data?.updated > 0) mutate();
+      })
+      .catch(() => {});
+  }, [id, user, thread]);
+
   // Initialize Socket.io
   useEffect(() => {
     if (!user || !id) return;

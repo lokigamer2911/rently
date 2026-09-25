@@ -145,6 +145,16 @@ cd backend
 npx prisma migrate deploy
 ```
 
+### Seed initial data (categories + admin account)
+```bash
+cd backend
+npm run seed
+```
+
+Creates the six rental categories (required before anyone can publish a listing)
+and an admin login: `test@rentrex.local` / `Password123!` — change the password
+after first sign-in, or re-seed with your own credentials.
+
 ---
 
 ## 🐛 Common Issues

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
@@ -31,6 +32,8 @@ async function main() {
       name: 'Test Host',
       bio: 'A verified local host with premium items.',
       role: 'ADMIN',
+      emailVerified: true,
+      passwordHash: await bcrypt.hash('Password123!', 12),
     },
   });
 
@@ -51,6 +54,7 @@ async function main() {
   });
 
   console.log('Database seeded successfully!');
+  console.log('Seeded admin login -> email: test@rentrex.local  password: Password123!');
 }
 
 main()

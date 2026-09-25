@@ -180,6 +180,12 @@ export default function ListingDetail({ initialListing }) {
   };
 
   const book = async () => {
+    // Bookings are legally binding rental agreements — require a verified email.
+    if (user && user.emailVerified === false) {
+      toast.error('Verify your email before booking — check your inbox for the link.');
+      router.push({ pathname: '/auth/verify-email-pending', query: { email: user.email || '' } });
+      return;
+    }
     if (!start || !end) return toast.error('Pick booking dates first');
     if (new Date(end) <= new Date(start)) return toast.error('End date must be after the start date');
     

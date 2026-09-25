@@ -43,7 +43,7 @@ async function requireAuth(req, res, next) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, tokenVersion: true, role: true },
+      select: { id: true, tokenVersion: true, role: true, emailVerified: true },
     });
 
     if (!user) return res.status(401).json({ error: 'User not found' });
@@ -52,7 +52,7 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ error: 'Session expired. Please log in again.' });
     }
 
-    req.user = { ...decoded, role: user.role };
+    req.user = { ...decoded, role: user.role, emailVerified: user.emailVerified };
     next();
   } catch (e) {
     next(e);

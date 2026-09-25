@@ -2,6 +2,7 @@ const express = require('express');
 const { z, ZodError } = require('zod');
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
+const { createNotification } = require('../utils/notifications');
 const { sendDisputeNotificationEmail } = require('../utils/email');
 
 const CUID_RE = /^[a-z0-9]{20,}$/i;
@@ -24,8 +25,8 @@ const createDisputeSchema = z.object({
 
 const routeErrorHandler = (error, res) => {
   if (error instanceof ZodError) {
-    // Zod 4 renamed .errors to .issues
-    return res.status(400).json({ error: error.issues });
+    // Zod 4 renamed .errors to .issues; return a readable string, not raw issue objects
+    return res.status(400).json({ error: error.issues.map(i => i.message).join(', ') });
   }
   return res.status(500).json({ error: 'Failed to process request' });
 };
@@ -104,7 +105,9 @@ router.get('/', requireAuth, async (req, res) => {
             listing: true
           }
         },
-        user: true
+        // SECURITY: explicit select — `user: true` would leak passwordHash,
+        // refreshToken and other private columns into the admin browser.
+        user: { select: { id: true, name: true, email: true, avatarUrl: true } }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -133,11 +136,32 @@ router.post('/:id/resolve', requireAuth, async (req, res) => {
 
     // Update the booking status if requested
     if (resolutionAction) {
+      const booking = await prisma.booking.findUnique({
+        where: { id: dispute.bookingId },
+        select: { status: true, totalAmount: true, serviceFee: true },
+      });
+      const data = { status: resolutionAction };
+      // Mirror the /status route refund rule when cancelling a confirmed booking
+      if (resolutionAction === 'CANCELLED' && booking?.status === 'CONFIRMED') {
+        data.refundAmount = (booking.totalAmount || 0) - (booking.serviceFee || 0);
+      }
       await prisma.booking.update({
         where: { id: dispute.bookingId },
-        data: { status: resolutionAction }
+        data,
       });
     }
+
+    // Notify the reporter of the outcome (in-app)
+    const io = req.app.get('io');
+    await createNotification(io, {
+      userId: dispute.userId,
+      type: 'BOOKING_UPDATE',
+      title: 'Dispute resolved ✅',
+      body: resolutionAction
+        ? `Your report for booking ${dispute.bookingId} was resolved — the booking was marked ${resolutionAction}.`
+        : `Your report for booking ${dispute.bookingId} was reviewed and resolved.`,
+      link: '/bookings',
+    });
 
     res.json({ message: 'Dispute resolved successfully' });
   } catch (error) {

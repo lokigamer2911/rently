@@ -8,9 +8,13 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
+    "seed": "node prisma/seed.js",
     "postinstall": "prisma generate",
     "test": "jest --detectOpenHandles --coverage",
     "lint": "eslint \"src/**/*.js\""
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -176,11 +176,9 @@ export const generateAgreement = (booking) => {
     doc.text('Renter Signature', 120, finalY + 100);
   }
 
-  // Evidence integrity block
+  // Evidence integrity block — printed at the bottom of the last page
   const hashes = [pickupMeta?.envelope?.hash, returnMeta?.envelope?.hash].filter(Boolean);
   if (hashes.length) {
-    const page = hasAnySignature && returnParties ? doc.internal.getNumberOfPages() : doc.getCurrentPageInfo().pageNumber;
-    doc.setPage(page);
     doc.setFontSize(6.5);
     doc.setTextColor(120, 120, 120);
     let hy = 280;

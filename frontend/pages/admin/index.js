@@ -24,9 +24,12 @@ export default function Admin() {
   );
   const payments = paymentsData || EMPTY_PAYMENTS;
 
-  // The "UPI payment awaiting verification" notification links straight here.
+  // The "UPI payment awaiting verification" and dispute notifications link
+  // straight here via ?tab=payments / ?tab=disputes.
   useEffect(() => {
-    if (router.isReady && router.query.tab === 'payments') setTab('payments');
+    if (router.isReady && ['payments', 'disputes'].includes(router.query.tab)) {
+      setTab(router.query.tab);
+    }
   }, [router.isReady, router.query.tab]);
 
   const setRole = async (id, role) => {

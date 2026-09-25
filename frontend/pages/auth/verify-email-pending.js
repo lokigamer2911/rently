@@ -9,7 +9,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 export default function VerifyEmailPending() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
@@ -21,6 +21,17 @@ export default function VerifyEmailPending() {
     const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
     return () => clearTimeout(timer);
   }, [cooldown]);
+
+  // Poll the session so this page flips to "verified" automatically once the
+  // user clicks the email link (possibly in another tab or on their phone).
+  useEffect(() => {
+    if (user?.emailVerified) return;
+    const interval = setInterval(() => {
+      refreshUser();
+    }, 8000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.emailVerified]);
 
   const resendEmail = async () => {
     if (cooldown > 0) return;
@@ -64,9 +75,15 @@ export default function VerifyEmailPending() {
           className="w-full !py-3.5"
           onClick={() => router.push('/listings')}
         >
-          Continue to listings
+          {user?.emailVerified ? 'Email verified — continue' : 'Continue to listings'}
           <FiArrowRight size={16} />
         </Button>
+
+        {user?.emailVerified && (
+          <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
+            ✓ Verified — booking is now unlocked
+          </p>
+        )}
 
         <Button
           variant="secondary"

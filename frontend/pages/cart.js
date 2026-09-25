@@ -114,6 +114,13 @@ export default function Cart() {
       return;
     }
 
+    // Bookings are legally binding rental agreements — require a verified email.
+    if (user.emailVerified === false) {
+      toast.error('Verify your email before booking — check your inbox for the link.');
+      router.push({ pathname: '/auth/verify-email-pending', query: { email: user.email || '' } });
+      return;
+    }
+
     const ownedItem = cart.find((item) => user && (user.id === item.ownerId || user.id === item.owner?.id));
     if (ownedItem) {
       toast.error(`You cannot rent your own item: ${ownedItem.title}`);
