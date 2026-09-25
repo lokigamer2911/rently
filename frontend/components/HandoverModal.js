@@ -124,7 +124,7 @@ export default function HandoverModal({ booking, type, onClose, onComplete }) {
                   <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl hover:border-brand-500 hover:bg-brand-50 transition cursor-pointer group">
                     <FiCamera className="text-slate-400 group-hover:text-brand-600" size={20} />
                     <span className="text-[9px] mt-1 text-slate-400 group-hover:text-brand-600 font-bold uppercase">Add Photo</span>
-                    <input type="file" multiple accept="image/*" className="hidden" onChange={uploadPhotos} />
+                    <input type="file" multiple accept="image/*" capture="environment" className="hidden" onChange={uploadPhotos} />
                   </label>
                 )}
               </div>

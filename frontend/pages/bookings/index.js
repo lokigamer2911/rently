@@ -12,6 +12,22 @@ import { generateAgreement } from '../../lib/pdf';
 import { useAuth } from '../../hooks/useAuth';
 import TiltCard from '../../components/TiltCard';
 
+/** Signature entries: bare data-URL strings (legacy) or { signature, ... } objects (envelope). */
+const srcOf = (s) => (typeof s === 'string' ? s : s?.signature || null);
+
+/** One-line audit summary under a signature card in the evidence modal. */
+function SignatureAuditLine({ envelope, role }) {
+  const party = envelope?.parties?.[role];
+  if (!party) return null;
+  return (
+    <p className="text-[8px] text-slate-500 mt-1 leading-relaxed">
+      {party.signedAt && <>Signed {new Date(party.signedAt).toLocaleString()} · </>}
+      {party.ip && <>IP {party.ip} · </>}
+      {envelope?.hash && <>Evidence {String(envelope.hash).slice(0, 10)}…</>}
+    </p>
+  );
+}
+
 export default function Bookings() {
   const [tab, setTab] = useState('mine');
   const [disputeBooking, setDisputeBooking] = useState(null);
@@ -187,6 +203,9 @@ export default function Bookings() {
                         try { photos.push({ label: 'Return', urls: JSON.parse(b.returnPhotos) }); } catch(err){}
                       }
                       
+                      const parseMeta = (raw) => { try { return JSON.parse(raw || 'null'); } catch(err){ return null; } };
+                      const pickupEnvelope = parseMeta(b.pickupSignatureMeta)?.envelope;
+                      const returnEnvelope = parseMeta(b.returnSignatureMeta)?.envelope;
                       let pickupSigs = null;
                       if (b.pickupSignatures) {
                         try { pickupSigs = JSON.parse(b.pickupSignatures); } catch(err){}
@@ -200,7 +219,9 @@ export default function Bookings() {
                         title: b.listing.title, 
                         data: photos,
                         pickupSignatures: pickupSigs,
-                        returnSignatures: returnSigs
+                        returnSignatures: returnSigs,
+                        pickupEnvelope,
+                        returnEnvelope
                       });
                     }}
                     className="!py-2.5 !px-4 flex items-center gap-2 text-slate-600 hover:bg-slate-50 border-slate-200"
@@ -390,16 +411,18 @@ export default function Bookings() {
                             <div className="text-center bg-slate-950 border border-white/5 rounded-xl p-2">
                               <p className="text-[9px] font-bold text-slate-400 uppercase">Renter</p>
                               <div className="h-16 flex items-center justify-center">
-                                <img src={viewPhotos.pickupSignatures.renter} alt="Renter Pickup Signature" className="max-h-full max-w-full object-contain" />
+                                <img src={srcOf(viewPhotos.pickupSignatures.renter)} alt="Renter Pickup Signature" className="max-h-full max-w-full object-contain" />
                               </div>
+                              <SignatureAuditLine envelope={viewPhotos.pickupEnvelope} role="renter" />
                             </div>
                           )}
                           {viewPhotos.pickupSignatures.host && (
                             <div className="text-center bg-slate-950 border border-white/5 rounded-xl p-2">
                               <p className="text-[9px] font-bold text-slate-400 uppercase">Host</p>
                               <div className="h-16 flex items-center justify-center">
-                                <img src={viewPhotos.pickupSignatures.host} alt="Host Pickup Signature" className="max-h-full max-w-full object-contain" />
+                                <img src={srcOf(viewPhotos.pickupSignatures.host)} alt="Host Pickup Signature" className="max-h-full max-w-full object-contain" />
                               </div>
+                              <SignatureAuditLine envelope={viewPhotos.pickupEnvelope} role="host" />
                             </div>
                           )}
                         </div>
@@ -415,16 +438,18 @@ export default function Bookings() {
                             <div className="text-center bg-slate-950 border border-white/5 rounded-xl p-2">
                               <p className="text-[9px] font-bold text-slate-400 uppercase">Renter</p>
                               <div className="h-16 flex items-center justify-center">
-                                <img src={viewPhotos.returnSignatures.renter} alt="Renter Return Signature" className="max-h-full max-w-full object-contain" />
+                                <img src={srcOf(viewPhotos.returnSignatures.renter)} alt="Renter Return Signature" className="max-h-full max-w-full object-contain" />
                               </div>
+                              <SignatureAuditLine envelope={viewPhotos.returnEnvelope} role="renter" />
                             </div>
                           )}
                           {viewPhotos.returnSignatures.host && (
                             <div className="text-center bg-slate-950 border border-white/5 rounded-xl p-2">
                               <p className="text-[9px] font-bold text-slate-400 uppercase">Host</p>
                               <div className="h-16 flex items-center justify-center">
-                                <img src={viewPhotos.returnSignatures.host} alt="Host Return Signature" className="max-h-full max-w-full object-contain" />
+                                <img src={srcOf(viewPhotos.returnSignatures.host)} alt="Host Return Signature" className="max-h-full max-w-full object-contain" />
                               </div>
+                              <SignatureAuditLine envelope={viewPhotos.returnEnvelope} role="host" />
                             </div>
                           )}
                         </div>
