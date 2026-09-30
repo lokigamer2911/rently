@@ -65,6 +65,14 @@ jest.mock('../src/middleware/auth', () => ({
 
 const prisma = require('../src/config/prisma');
 const { createNotification } = require('../src/utils/notifications');
+
+// Admin routes now also require the platform admin key. Configure a test hash
+// and send the matching header on every admin request below.
+const ADMIN_KEY = 'rnt_test_admin_key';
+process.env.ADMIN_KEY_HASH = require('crypto')
+  .createHash('sha256').update(ADMIN_KEY, 'utf8').digest('hex');
+const adminKeyHeader = { 'X-Admin-Key': ADMIN_KEY };
+
 const paymentRoutes = require('../src/routes/payment.routes');
 const adminRoutes = require('../src/routes/admin.routes');
 
@@ -320,7 +328,10 @@ describe('Admin payment verification', () => {
       listing: { id: LISTING_ID, ownerId: 'owner-1', title: 'Sony A7 III' },
     });
 
-    const res = await request(app).post(`/api/admin/payments/${PAYMENT_ID}/verify`).expect(200);
+    const res = await request(app)
+      .post(`/api/admin/payments/${PAYMENT_ID}/verify`)
+      .set(adminKeyHeader)
+      .expect(200);
 
     expect(res.body.ok).toBe(true);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
@@ -334,7 +345,10 @@ describe('Admin payment verification', () => {
       id: PAYMENT_ID, method: 'RAZORPAY', status: 'CREATED', bookingId: BOOKING_ID,
     });
 
-    await request(app).post(`/api/admin/payments/${PAYMENT_ID}/verify`).expect(409);
+    await request(app)
+      .post(`/api/admin/payments/${PAYMENT_ID}/verify`)
+      .set(adminKeyHeader)
+      .expect(409);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -347,6 +361,7 @@ describe('Admin payment verification', () => {
 
     const res = await request(app)
       .post(`/api/admin/payments/${PAYMENT_ID}/reject`)
+      .set(adminKeyHeader)
       .send({ reason: 'No matching credit' })
       .expect(200);
 
@@ -365,14 +380,21 @@ describe('Admin payment verification', () => {
 
     await request(app)
       .post(`/api/admin/payments/${PAYMENT_ID}/reject`)
+      .set(adminKeyHeader)
       .send({ reason: 'oops' })
       .expect(409);
   });
 
-  it('is closed to non-admins', async () => {
+  it('is closed to non-admins (even with a valid admin key)', async () => {
     asRenter();
-    await request(app).get('/api/admin/payments?status=ALL').expect(403);
-    await request(app).post(`/api/admin/payments/${PAYMENT_ID}/verify`).expect(403);
+    await request(app).get('/api/admin/payments?status=ALL').set(adminKeyHeader).expect(403);
+    await request(app).post(`/api/admin/payments/${PAYMENT_ID}/verify`).set(adminKeyHeader).expect(403);
+  });
+
+  it('is closed to admins without the admin key', async () => {
+    asAdmin();
+    await request(app).get('/api/admin/payments?status=ALL').expect(401);
+    await request(app).post(`/api/admin/payments/${PAYMENT_ID}/verify`).expect(401);
   });
 
   it('lists UPI payments for review', async () => {
@@ -394,7 +416,10 @@ describe('Admin payment verification', () => {
       },
     }]);
 
-    const res = await request(app).get('/api/admin/payments?status=ALL').expect(200);
+    const res = await request(app)
+      .get('/api/admin/payments?status=ALL')
+      .set(adminKeyHeader)
+      .expect(200);
 
     expect(res.body).toHaveLength(1);
     expect(res.body[0]).toMatchObject({

@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
-import { FiAlertCircle, FiCheck, FiExternalLink, FiX } from 'react-icons/fi';
-import { api, fetcher } from '../../lib/api';
+import { FiAlertCircle, FiCheck, FiExternalLink, FiLock, FiX } from 'react-icons/fi';
+import { api } from '../../lib/api';
+import { adminFetcher, adminKeyHeaders, getStoredAdminKey, clearStoredAdminKey } from '../../lib/adminKey';
 import Button from '../../components/Button';
+import AdminKeyGate from '../../components/AdminKeyGate';
 import { useAuth } from '../../hooks/useAuth';
 
 const EMPTY_PAYMENTS = [];
@@ -14,13 +16,48 @@ export default function Admin() {
   const router = useRouter();
   const [tab, setTab] = useState('users');
   const [busyPaymentId, setBusyPaymentId] = useState(null);
-  const { data: stats } = useSWR('/admin/stats', fetcher);
-  const { data: users, mutate: mutateUsers } = useSWR('/admin/users', fetcher);
-  const { data: disputes, mutate: mutateDisputes } = useSWR('/disputes', fetcher);
+  // Second lock: the admin access key. Session-scoped, validated on mount.
+  const [unlocked, setUnlocked] = useState(false);
+  const [checkingKey, setCheckingKey] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const stored = getStoredAdminKey();
+      if (!stored) {
+        setCheckingKey(false);
+        return;
+      }
+      try {
+        await api.get('/admin/key-check', { headers: { 'X-Admin-Key': stored } });
+        if (!cancelled) setUnlocked(true);
+      } catch {
+        // Stale/invalid key — drop it so the user sees the unlock form again.
+        clearStoredAdminKey();
+      } finally {
+        if (!cancelled) setCheckingKey(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  // Admin data is fetched only after the key gate unlocks — failed pre-unlock
+  // calls would count against the 5-per-15-minutes admin-key rate limit.
+  const { data: stats } = useSWR(
+    unlocked ? '/admin/stats' : null,
+    adminFetcher,
+  );
+  const { data: users, mutate: mutateUsers } = useSWR(
+    unlocked ? '/admin/users' : null,
+    adminFetcher,
+  );
+  const { data: disputes, mutate: mutateDisputes } = useSWR(
+    unlocked ? '/disputes' : null,
+    adminFetcher,
+  );
   // Only admins hit this endpoint — everyone else would just collect a 403.
   const { data: paymentsData, mutate: mutatePayments } = useSWR(
-    user?.role === 'ADMIN' ? '/admin/payments?status=ALL' : null,
-    fetcher,
+    unlocked && user?.role === 'ADMIN' ? '/admin/payments?status=ALL' : null,
+    adminFetcher,
   );
   const payments = paymentsData || EMPTY_PAYMENTS;
 
@@ -33,7 +70,7 @@ export default function Admin() {
   }, [router.isReady, router.query.tab]);
 
   const setRole = async (id, role) => {
-    await api.patch(`/admin/users/${id}/role`, { role });
+    await api.patch(`/admin/users/${id}/role`, { role }, adminKeyHeaders());
     toast.success('Role updated'); mutateUsers();
   };
 
@@ -51,7 +88,7 @@ export default function Admin() {
 
     setBusyPaymentId(payment.id);
     try {
-      await api.post(`/admin/payments/${payment.id}/verify`);
+      await api.post(`/admin/payments/${payment.id}/verify`, {}, adminKeyHeaders());
       toast.success('Payment verified — booking confirmed');
       mutatePayments();
     } catch (error) {
@@ -67,7 +104,7 @@ export default function Admin() {
 
     setBusyPaymentId(payment.id);
     try {
-      await api.post(`/admin/payments/${payment.id}/reject`, { reason });
+      await api.post(`/admin/payments/${payment.id}/reject`, { reason }, adminKeyHeaders());
       toast.success('Payment marked as not received');
       mutatePayments();
     } catch (error) {
@@ -79,7 +116,7 @@ export default function Admin() {
 
   const resolveDispute = async (id, action) => {
     try {
-      await api.post(`/disputes/${id}/resolve`, { resolutionAction: action });
+      await api.post(`/disputes/${id}/resolve`, { resolutionAction: action }, adminKeyHeaders());
       toast.success('Dispute resolved');
       mutateDisputes();
     } catch(err) {
@@ -93,9 +130,21 @@ export default function Admin() {
     return null;
   }
 
+  if (checkingKey) return <div className="py-20 text-center animate-pulse">Checking admin access…</div>;
+  if (!unlocked) return <AdminKeyGate onUnlock={() => setUnlocked(true)} />;
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Admin</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Admin</h1>
+        <button
+          onClick={() => { clearStoredAdminKey(); setUnlocked(false); }}
+          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
+          title="Forget the admin key in this tab"
+        >
+          <FiLock size={12} /> Lock admin area
+        </button>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats && Object.entries(stats).map(([k,v]) => (
           <div key={k} className="card">

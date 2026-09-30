@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const prisma = require('../config/prisma');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { requireAdminKey } = require('../middleware/adminKey');
 const { z } = require('zod');
 const {
   STATUS,
@@ -16,7 +17,18 @@ function validateId(req, res, next) {
   next();
 }
 
+// First lock: must be logged in as an ADMIN-role user.
 router.use(requireAuth, requireAdmin);
+// Second lock: the secret admin key (X-Admin-Key header / adminKey body field).
+router.use(requireAdminKey);
+
+/**
+ * The admin UI calls this with the key to show it is unlocked; it returns the
+ * identity of the key in use. Failure counts are rate limited (see app.js).
+ */
+router.get('/key-check', async (req, res) => {
+  res.json({ ok: true, keyId: req.adminKeyId });
+});
 
 router.get('/stats', async (_req, res, next) => {
   try {
@@ -130,6 +142,57 @@ router.post('/payments/:id/verify', validateId, async (req, res, next) => {
     }
 
     res.json({ ok: true, bookingId: result.bookingId, alreadyProcessed: result.alreadyProcessed });
+  } catch (e) { next(e); }
+});
+
+/**
+ * Read-only audit record for one payment: everything an owner needs to prove
+ * who confirmed what, when, and against which bank credit. Safe to paste into
+ * a dispute ticket.
+ */
+router.get('/payments/:id/receipt', validateId, async (req, res, next) => {
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        booking: {
+          include: {
+            listing: { select: { id: true, title: true, city: true } },
+            renter: { select: { name: true, email: true, phone: true } },
+          },
+        },
+      },
+    });
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    res.json({
+      paymentId: payment.id,
+      method: payment.method,
+      status: payment.status,
+      amount: payment.amount,
+      ref: payment.upiRef,
+      payeeVpa: payment.upiPayeeVpa,
+      payeeName: payment.upiPayeeName,
+      utr: payment.payerUtr,
+      renterNote: payment.payerNote,
+      proofUrl: payment.proofUrl,
+      razorpayPaymentId: payment.razorpayPaymentId || null,
+      rejectionReason: payment.rejectionReason,
+      verifiedAt: payment.verifiedAt,
+      verifiedByKey: req.adminKeyId,
+      booking: payment.booking
+        ? {
+            id: payment.booking.id,
+            status: payment.booking.status,
+            startDate: payment.booking.startDate,
+            endDate: payment.booking.endDate,
+            listingTitle: payment.booking.listing?.title || null,
+            listingCity: payment.booking.listing?.city || null,
+            renter: payment.booking.renter || null,
+          }
+        : null,
+      generatedAt: new Date().toISOString(),
+    });
   } catch (e) { next(e); }
 });
 
