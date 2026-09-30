@@ -59,6 +59,18 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true,
 });
 
+// SECURITY: Admin-key brute-force guard. Only failed admin-key attempts count,
+// so the owner's normal usage never trips it, but guessing is capped at 5
+// tries per 15 minutes per IP.
+const adminKeyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many invalid admin key attempts. Try again after 15 minutes.', code: 'ADMIN_KEY_RATE_LIMITED' },
+});
+
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -161,7 +173,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
+app.use('/api/admin', adminKeyLimiter, adminRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/favorites', favoriteRoutes);
 

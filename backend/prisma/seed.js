@@ -1,6 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const prisma = new PrismaClient();
+
+// SECURITY: the founder password never lives in the repo. Set
+// FOUNDER_SEED_PASSWORD in the environment to choose it deterministically;
+// if unset, a random one is generated and printed ONCE on first creation.
 
 async function main() {
   console.log('Seeding database...');
@@ -36,6 +41,37 @@ async function main() {
       passwordHash: await bcrypt.hash('Password123!', 12),
     },
   });
+
+  // Founder admin account (idempotent: re-running the seed updates the role
+  // but never overwrites an existing password).
+  const FOUNDER_EMAIL = 'nomulalokesh29@gmail.com';
+  const existingFounder = await prisma.user.findUnique({ where: { email: FOUNDER_EMAIL } });
+  if (!existingFounder) {
+    const envPassword = process.env.FOUNDER_SEED_PASSWORD;
+    const oneTimePassword = envPassword || ('Rently-' + crypto.randomBytes(12).toString('base64url'));
+    await prisma.user.create({
+      data: {
+        email: FOUNDER_EMAIL,
+        name: 'Lokesh',
+        role: 'ADMIN',
+        emailVerified: true,
+        passwordHash: await bcrypt.hash(oneTimePassword, 12),
+      },
+    });
+    if (envPassword) {
+      console.log(`Founder admin created -> ${FOUNDER_EMAIL} (password taken from FOUNDER_SEED_PASSWORD)`);
+    } else {
+      console.log(`Founder admin created -> ${FOUNDER_EMAIL}`);
+      console.log(`ONE-TIME PASSWORD (save it now, shown only once): ${oneTimePassword}`);
+    }
+  } else {
+    if (existingFounder.role !== 'ADMIN') {
+      await prisma.user.update({ where: { email: FOUNDER_EMAIL }, data: { role: 'ADMIN' } });
+      console.log(`Founder ${FOUNDER_EMAIL} promoted to ADMIN (password unchanged)`);
+    } else {
+      console.log(`Founder admin already present -> ${FOUNDER_EMAIL} (password unchanged)`);
+    }
+  }
 
   // Create a Listing
   await prisma.listing.create({

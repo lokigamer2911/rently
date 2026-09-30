@@ -49,11 +49,13 @@ Go to: **Render Dashboard → Your Service → Environment**
 | `RAZORPAY_KEY_SECRET` | `xxxxx` | Razorpay secret |
 | `RAZORPAY_WEBHOOK_SECRET` | `xxxxx` | Razorpay webhook signing secret |
 | `PAYMENTS_RAZORPAY_ENABLED` | `false` | `true` only once Razorpay is live. While `false`, checkout uses the UPI QR fallback |
-| `UPI_PAYEES` | `[{"vpa":"you@okhdfcbank","name":"Rently","label":"Founder"}]` | UPI IDs for you + co-founders, handed out round-robin per booking |
-| `UPI_VPA` | `you@okhdfcbank` | Shorthand when you only have one UPI ID |
-| `UPI_PAYEE_NAME` | `Rently` | Payee name shown in the UPI app |
+| `UPI_PAYEES` | `[{"vpa":"9550304441@ybl","name":"ALLU HEMACHARAN","label":"Founder"}]` | UPI IDs for you + co-founders, handed out round-robin per booking |
+| `UPI_VPA` | `9550304441@ybl` | Shorthand when you only have one UPI ID (founder's PhonePe/SBI QR) |
+| `UPI_PAYEE_NAME` | `ALLU HEMACHARAN` | Payee name shown in the UPI app |
 | `UPI_STATIC_QR_IMAGE_URL` | `https://res.cloudinary.com/.../qr.png` | Optional: your own UPI QR image, shown under the generated one |
 | `PAYMENTS_SUPPORT_CONTACT` | `payments@rently.in` | Optional: shown when a payment needs matching by hand |
+| `ADMIN_KEY_HASH` | `90a4b9863c02…` (64 hex chars) | **REQUIRED for /admin** — SHA-256 of the admin access key. Only the hash goes here; the raw key is known only to the owner |
+| `ADMIN_KEY_ID` | `founder-key-1` | Short public label stamped into admin receipts |
 | `GEMINI_API_KEY` | `AIzaSy...` | Google Gemini (for AI suggestions) |
 | `SENDGRID_API_KEY` | `SG.xxxx` | SendGrid email service |
 | `EMAIL_FROM` | `noreply@rently.in` | Sender email address |
@@ -124,8 +126,26 @@ Go to: **GitHub → Repository → Settings → Secrets and Variables → Action
 - [ ] Razorpay keys are test keys until you're ready for production
 - [ ] Firebase private key has escaped newlines (`\\n` not actual newlines)
 - [ ] `NODE_ENV=production` is set on Render
+- [ ] `ADMIN_KEY_HASH` is set (admin area stays locked without it) and the raw key is saved in a password manager, never in the repo
 
 ---
+
+## 🔑 Admin Access Key
+
+The `/admin` area has two locks: the admin **login** and a separate **admin access key**.
+
+1. Generate a key (any machine with Python):
+   ```bash
+   python -c "import secrets; print('rnt_'+secrets.token_urlsafe(30))"
+   ```
+2. Hash it and put **only the hash** in the backend environment:
+   ```bash
+   python -c "import hashlib; print(hashlib.sha256(b'PASTE_THE_KEY').hexdigest())"
+   ```
+3. Save the raw key in your password manager. Opening `/admin` asks for it once per browser tab; wrong attempts are rate limited to 5 per 15 minutes per IP.
+4. To rotate (key lost, staff change): generate a new key, replace `ADMIN_KEY_HASH`, redeploy. Old keys stop working immediately.
+
+The key is never stored in the database and only its hash reaches the server, so a full database leak does not expose it.
 
 ## 🚀 Deployment Commands
 
@@ -152,8 +172,15 @@ npm run seed
 ```
 
 Creates the six rental categories (required before anyone can publish a listing)
-and an admin login: `test@rentrex.local` / `Password123!` — change the password
-after first sign-in, or re-seed with your own credentials.
+and two admin logins:
+
+- Founder: `nomulalokesh29@gmail.com` — the password is only printed by the seed
+  when the account is first created; save it immediately and change it after
+  first sign-in. Re-running the seed updates the role but never resets the password.
+- Test admin: `test@rentrex.local` / `Password123!` — change or remove this
+  before going live.
+
+Remember /admin additionally requires the admin access key (ADMIN_KEY_HASH).
 
 ---
 
