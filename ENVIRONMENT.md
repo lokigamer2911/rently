@@ -154,6 +154,11 @@ The key is never stored in the database and only its hash reaches the server, so
 cd backend && npm install && npx prisma generate && npx prisma migrate deploy
 ```
 
+> ⚠️ **Use `migrate deploy`, NOT `db push`.** Migrations are committed in
+> `backend/prisma/migrations/` and apply cleanly on every deploy. The older
+> `npx prisma db push` command diffs the live database directly and can fail
+> or require `--accept-data-loss` when it hits existing rows.
+
 ### Render Start Command
 ```bash
 cd backend && node src/index.js
