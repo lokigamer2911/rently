@@ -3,6 +3,7 @@ import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { FiFileText, FiStar, FiClock, FiDownload, FiInfo, FiMapPin, FiCamera, FiX, FiActivity, FiCreditCard } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
+import AnimatedIcon from '../../components/AnimatedIcon';
 import Button from '../../components/Button';
 import HandoverModal from '../../components/HandoverModal';
 import ReviewModal from '../../components/ReviewModal';
@@ -107,10 +108,13 @@ export default function Bookings() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 sm:space-y-8 mobile-nav-spacer">
-      <header>
+      <header className="flex items-center gap-4">
+        <AnimatedIcon icon={FiClock} tone="blue" size="lg" />
+        <div>
         <p className="eyebrow mb-2 sm:mb-3">Rental Management</p>
         <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>Your Bookings</h1>
         <p className="section-copy mt-3 sm:mt-4">Track your rentals, confirm requests, and download agreements.</p>
+        </div>
       </header>
 
       {/* Tabs */}
@@ -321,9 +325,7 @@ export default function Bookings() {
         ) : (
           <div className="surface-card text-center py-24 space-y-4">
              <TiltCard max={12} glare={false} className="mx-auto w-fit">
-               <div className="reveal-3d w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300 pop-layer">
-                  <FiInfo size={36} />
-               </div>
+               <AnimatedIcon icon={FiInfo} tone="blue" size="lg" />
              </TiltCard>
              <h2 className="text-2xl font-bold text-slate-900">No bookings found</h2>
              <p className="text-slate-500 max-w-xs mx-auto text-sm leading-relaxed">

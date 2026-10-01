@@ -1,9 +1,10 @@
-import { FiDollarSign, FiPackage, FiActivity, FiArrowRight, FiUser, FiPlus, FiStar } from 'react-icons/fi';
+import { FiDollarSign, FiPackage, FiActivity, FiArrowRight, FiUser, FiPlus, FiStar, FiCalendar } from 'react-icons/fi';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { fetcher } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/Button';
+import AnimatedIcon from '../components/AnimatedIcon';
 import TiltCard from '../components/TiltCard';
 
 export default function Dashboard() {
@@ -17,10 +18,13 @@ export default function Dashboard() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10 mobile-nav-spacer">
       <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
-        <div>
-          <p className="eyebrow mb-2 sm:mb-3">Host Command Center</p>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>Welcome back, {user.name?.split(' ')[0]}</h1>
-          <p className="section-copy mt-3 sm:mt-4">Monitor your rental performance.</p>
+        <div className="flex items-center gap-4">
+          <AnimatedIcon icon={FiActivity} tone="emerald" size="lg" />
+          <div>
+            <p className="eyebrow mb-2 sm:mb-3">Host Command Center</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>Welcome back, {user.name?.split(' ')[0]}</h1>
+            <p className="section-copy mt-3 sm:mt-4">Monitor your rental performance.</p>
+          </div>
         </div>
         <Button href="/listings/new" variant="primary" className="!py-3 sm:!py-4 !px-5 sm:!px-8 shadow-brand flex items-center gap-2">
           <FiPlus size={20} />
@@ -48,9 +52,7 @@ export default function Dashboard() {
           <div className="surface-card h-full">
             <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Active Rentals</p>
             <div className="mt-4 flex items-center gap-3 pop-layer">
-               <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
-                  <FiActivity size={20} />
-               </div>
+               <AnimatedIcon icon={FiActivity} tone="emerald" size="md" />
                <span className="text-3xl font-bold text-slate-900">{stats.activeRentalsCount}</span>
             </div>
             <p className="mt-2 text-xs text-slate-500">Items currently with renters</p>
@@ -61,9 +63,7 @@ export default function Dashboard() {
           <div className="surface-card h-full">
             <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Total Listings</p>
             <div className="mt-4 flex items-center gap-3 pop-layer">
-               <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-                  <FiPackage size={20} />
-               </div>
+               <AnimatedIcon icon={FiPackage} tone="blue" size="md" delay="0.6s" />
                <span className="text-3xl font-bold text-slate-900">{stats.totalListings}</span>
             </div>
             <p className="mt-2 text-xs text-slate-500">Inventory live on marketplace</p>
@@ -74,9 +74,7 @@ export default function Dashboard() {
           <div className="surface-card h-full">
             <p className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Trust Score</p>
             <div className="mt-4 flex items-center gap-3 pop-layer">
-               <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
-                  <FiStar size={20} />
-               </div>
+               <AnimatedIcon icon={FiStar} tone="amber" size="md" delay="1.2s" />
                <span className="text-3xl font-bold text-slate-900">{stats.averageRating ? `${stats.averageRating.toFixed(1)}★` : '—'}</span>
             </div>
             <p className="mt-2 text-xs text-slate-500">{stats.reviewCount ? `From ${stats.reviewCount} review${stats.reviewCount === 1 ? '' : 's'}` : 'No reviews yet'}</p>
@@ -88,7 +86,10 @@ export default function Dashboard() {
         {/* Main Content: Recent Bookings */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-slate-900">Recent Incoming Bookings</h2>
+            <div className="flex items-center gap-3">
+              <AnimatedIcon icon={FiCalendar} tone="blue" size="sm" />
+              <h2 className="text-2xl font-bold text-slate-900">Recent Incoming Bookings</h2>
+            </div>
             <Link href="/bookings" className="text-brand-600 text-sm font-bold hover:underline">View All</Link>
           </div>
 
@@ -129,7 +130,10 @@ export default function Dashboard() {
 
         {/* Sidebar: My Listings */}
         <aside className="space-y-6">
-          <h2 className="text-2xl font-bold text-slate-900">Your Inventory</h2>
+          <div className="flex items-center gap-3">
+            <AnimatedIcon icon={FiPackage} tone="purple" size="sm" />
+            <h2 className="text-2xl font-bold text-slate-900">Your Inventory</h2>
+          </div>
           <div className="space-y-3">
             {myListings?.slice(0, 5).map(l => (
               <div key={l.id} className="surface-card !p-3 flex items-center gap-3 border border-slate-100 hover:border-brand-200 transition-colors">
