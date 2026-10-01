@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import {
   FiArrowLeft,
   FiCalendar,
+  FiEye,
+  FiGrid,
   FiMapPin,
   FiShield,
   FiShoppingCart,
@@ -19,6 +21,7 @@ import {
   FiHeart,
 } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
+import AnimatedIcon from '../../components/AnimatedIcon';
 import MapView from '../../components/MapView';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -419,9 +422,12 @@ export default function ListingDetail({ initialListing }) {
           <div className="space-y-8 xl:col-span-2">
             <section className="surface-card">
               <div className="mb-5 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Listing narrative</p>
-                  <h2 className="mt-2 text-4xl text-slate-900">What renters should know</h2>
+                <div className="flex items-center gap-3">
+                  <AnimatedIcon icon={FiEye} tone="blue" size="sm" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Listing narrative</p>
+                    <h2 className="mt-2 text-4xl text-slate-900">What renters should know</h2>
+                  </div>
                 </div>
               </div>
               <p className="text-base leading-8 text-slate-600">{listing.description}</p>
@@ -447,9 +453,12 @@ export default function ListingDetail({ initialListing }) {
 
             {hasCoordinates && (
               <section className="surface-card">
-                <div className="mb-5">
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Pickup area</p>
-                  <h2 className="mt-2 text-4xl text-slate-900">Location overview</h2>
+                <div className="mb-5 flex items-center gap-3">
+                  <AnimatedIcon icon={FiMapPin} tone="emerald" size="sm" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Pickup area</p>
+                    <h2 className="mt-2 text-4xl text-slate-900">Location overview</h2>
+                  </div>
                 </div>
                 <MapView lat={listing.lat} lng={listing.lng} height={360} />
               </section>
@@ -457,9 +466,12 @@ export default function ListingDetail({ initialListing }) {
 
             <section className="surface-card">
               <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Social proof</p>
-                  <h2 className="mt-2 text-4xl text-slate-900">Renter reviews</h2>
+                <div className="flex items-center gap-3">
+                  <AnimatedIcon icon={FiStar} tone="amber" size="sm" />
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Social proof</p>
+                    <h2 className="mt-2 text-4xl text-slate-900">Renter reviews</h2>
+                  </div>
                 </div>
                 <p className="text-sm text-slate-500">
                   {listing.reviews?.length ? `${listing.reviews.length} review${listing.reviews.length === 1 ? '' : 's'} collected` : 'No reviews yet'}
@@ -495,7 +507,10 @@ export default function ListingDetail({ initialListing }) {
           <aside className="surface-card h-fit space-y-5 xl:sticky xl:top-28">
             {listing.owner?.name && (
               <div className="rounded-[1.6rem] border border-[rgba(37,52,42,0.08)] bg-white/70 p-4 text-sm leading-7 text-slate-600">
-                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Host signal</p>
+                <div className="flex items-center gap-3">
+                  <AnimatedIcon icon={FiUser} tone="emerald" size="sm" />
+                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Host signal</p>
+                </div>
                 <p className="mt-3 text-lg font-semibold text-slate-900">{listing.owner.name}</p>
                 <p className="mt-2">{listing.owner.bio || 'Responsive owner profile.'}</p>
               </div>
@@ -504,7 +519,10 @@ export default function ListingDetail({ initialListing }) {
             {!isOwner && (
               <div className="space-y-5">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Reservation Details</p>
+                  <div className="flex items-center gap-3">
+                    <AnimatedIcon icon={FiCalendar} tone="blue" size="sm" />
+                    <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Reservation Details</p>
+                  </div>
                   <p className="mt-3 text-4xl text-brand-700">Rs {(listing.pricePerDay / 100).toFixed(0)}</p>
                   <p className="mt-1 text-sm text-slate-500">
                     per 24h block, plus {listing.depositType === 'ALTERNATIVE' ? 'security collateral' : (listing.deposit > 0 ? `Rs ${(listing.deposit / 100).toFixed(0)} deposit` : 'no deposit')}
@@ -740,7 +758,10 @@ function SimilarListings({ currentListing, user }) {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Similar listings</h2>
+        <div className="flex items-center gap-3">
+          <AnimatedIcon icon={FiGrid} tone="blue" size="md" />
+          <h2 className="text-2xl font-bold">Similar listings</h2>
+        </div>
         <Link href="/listings" className="text-brand-600 text-sm font-bold hover:underline">View all</Link>
       </div>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
