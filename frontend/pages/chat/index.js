@@ -1,7 +1,7 @@
+import { FiMessageSquare, FiArrowRight, FiUser } from 'react-icons/fi';
 import useSWR from 'swr';
 import Link from 'next/link';
 import TiltCard from '../../components/TiltCard';
-import AnimatedIcon from '../../components/AnimatedIcon';
 import { fetcher } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -37,7 +37,7 @@ export default function Inbox() {
                       <img src={other.avatarUrl} alt={other.name} className="w-14 h-14 rounded-2xl object-cover" />
                     ) : (
                       <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
-                        <AnimatedIcon icon={FiUser} tone="blue" size={24} />
+                        <FiUser size={24} />
                       </div>
                     )}
                   </div>
@@ -52,7 +52,7 @@ export default function Inbox() {
                   </div>
 
                   <div className="text-right">
-                    <AnimatedIcon icon={FiArrowRight} tone="blue" size={20} className="text-slate-200 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" />
+                    <FiArrowRight className="text-slate-200 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" size={20} />
                   </div>
                   </Link>
                 </TiltCard>
@@ -63,7 +63,7 @@ export default function Inbox() {
           <div className="p-20 text-center space-y-4">
             <TiltCard max={12} glare={false} className="mx-auto w-fit">
               <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
-                <AnimatedIcon icon={FiMessageSquare} tone="blue" size={32} />
+                <FiMessageSquare size={32} />
               </div>
             </TiltCard>
             <h2 className="text-2xl font-bold text-slate-900">Quiet in here...</h2>

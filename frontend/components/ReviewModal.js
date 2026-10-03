@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import AnimatedIcon from './AnimatedIcon';
+import { FiX, FiStar, FiUploadCloud, FiLoader } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import Button from './Button';
@@ -66,7 +66,7 @@ export default function ReviewModal({ booking, onClose, onSuccess }) {
           onClick={onClose}
           className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"
         >
-          <AnimatedIcon icon={FiX} tone="red" size={20} />
+          <FiX size={20} />
         </button>
 
         <div className="mb-8">
@@ -91,7 +91,9 @@ export default function ReviewModal({ booking, onClose, onSuccess }) {
                   onMouseLeave={() => setHoverRating(0)}
                   onClick={() => setRating(star)}
                 >
-                  <AnimatedIcon icon={FiStar} tone="brand" size={36} className={`transition-colors duration-200 ${
+                  <FiStar
+                    size={36}
+                    className={`transition-colors duration-200 ${
                       star <= (hoverRating || rating)
                         ? 'fill-brand-500 text-brand-500'
                         : 'text-slate-200'
@@ -129,7 +131,7 @@ export default function ReviewModal({ booking, onClose, onSuccess }) {
                     onClick={() => removePhoto(url)}
                     className="absolute top-1 right-1 p-1 bg-white/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-red-500 shadow-sm"
                   >
-                    <AnimatedIcon icon={FiX} tone="red" size={14} />
+                    <FiX size={14} />
                   </button>
                 </div>
               ))}
@@ -138,7 +140,7 @@ export default function ReviewModal({ booking, onClose, onSuccess }) {
                   <FiLoader size={20} className="animate-spin" />
                 ) : (
                   <>
-                    <AnimatedIcon icon={FiUploadCloud} tone="blue" size={24} />
+                    <FiUploadCloud size={24} className="mb-1" />
                     <span className="text-[10px] font-bold uppercase tracking-widest">Add</span>
                   </>
                 )}

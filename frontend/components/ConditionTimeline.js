@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import AnimatedIcon from './AnimatedIcon';
+import {
+  FiX, FiCamera, FiPackage, FiCheckCircle, FiClock, FiXCircle,
+  FiCalendar, FiUser, FiZoomIn, FiChevronLeft, FiChevronRight,
+  FiShield, FiTag, FiTruck, FiRefreshCw
+} from 'react-icons/fi';
 import { api } from '../lib/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -52,7 +56,7 @@ function Lightbox({ photos, startIndex, onClose }) {
             onClick={() => setIdx(i => i - 1)}
             className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all border border-white/10"
           >
-            <AnimatedIcon icon={FiChevronLeft} tone="white" size={24} />
+            <FiChevronLeft size={24} className="text-white" />
           </button>
         )}
         {idx < photos.length - 1 && (
@@ -60,7 +64,7 @@ function Lightbox({ photos, startIndex, onClose }) {
             onClick={() => setIdx(i => i + 1)}
             className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all border border-white/10"
           >
-            <AnimatedIcon icon={FiChevronRight} tone="white" size={24} />
+            <FiChevronRight size={24} className="text-white" />
           </button>
         )}
 
@@ -77,7 +81,7 @@ function Lightbox({ photos, startIndex, onClose }) {
           onClick={onClose}
           className="absolute -top-4 -right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all border border-white/10"
         >
-          <AnimatedIcon icon={FiX} tone="white" size={16} />
+          <FiX size={16} className="text-white" />
         </button>
       </div>
     </div>
@@ -94,7 +98,7 @@ function PhotoGrid({ photos, label }) {
     <>
       <div className="mt-4 space-y-2">
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-          <AnimatedIcon icon={FiCamera} size={10} />
+          <FiCamera size={10} />
           {label} · {photos.length} photo{photos.length > 1 ? 's' : ''}
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -106,7 +110,7 @@ function PhotoGrid({ photos, label }) {
             >
               <img src={url} alt={`Condition ${i + 1}`} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-                <AnimatedIcon icon={FiZoomIn} size={20} className="text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100" />
+                <FiZoomIn size={20} className="text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100" />
               </div>
             </button>
           ))}
@@ -130,7 +134,7 @@ function SignaturePanel({ signatures, label, evidence }) {
   return (
     <div className="mt-4 rounded-2xl bg-slate-950/90 border border-white/5 p-4 space-y-3">
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2">
-        <AnimatedIcon icon={FiShield} size={10} />
+        <FiShield size={10} />
         {label} · Verified Signatures
       </p>
       <div className="grid grid-cols-2 gap-3">
@@ -205,7 +209,7 @@ function EventCard({ event, isLast, index }) {
           }`}
         >
           {isCancelled
-            ? <AnimatedIcon icon={FiXCircle} size={18} className="text-white" />
+            ? <FiXCircle size={18} className="text-white" />
             : <Icon size={18} className={isDone ? 'text-white' : 'text-slate-400'} />
           }
         </div>
@@ -281,7 +285,7 @@ function EventCard({ event, isLast, index }) {
             {/* Expand hint */}
             {isDone && (event.photos?.length > 0 || event.signatures) && (
               <div className={`text-[10px] font-bold mt-3 flex items-center gap-1 ${meta.light} w-fit px-2 py-1 rounded-full transition-all`}>
-                <AnimatedIcon icon={FiCamera} size={10} />
+                <FiCamera size={10} />
                 {event.photos?.length || 0} condition photo{(event.photos?.length || 0) !== 1 ? 's' : ''} · {expanded ? 'collapse' : 'tap to view'}
               </div>
             )}
@@ -433,7 +437,7 @@ export default function ConditionTimeline({ bookingId, listingTitle, onClose }) 
           {error && (
             <div className="flex flex-col items-center justify-center py-24 space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
-                <AnimatedIcon icon={FiXCircle} size={22} className="text-red-400" />
+                <FiXCircle size={22} className="text-red-400" />
               </div>
               <p className="text-sm font-semibold text-red-500">{error}</p>
             </div>

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import AnimatedIcon from './AnimatedIcon';
+import { FiCompass, FiMessageCircle, FiPackage, FiShoppingCart, FiZap, FiMenu, FiUser, FiClock, FiLogOut, FiBell, FiActivity, FiTrendingUp, FiHeart, FiSun, FiMoon, FiX } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
@@ -84,11 +84,11 @@ export default function Navbar() {
 
             <div className="flex items-center gap-2 sm:gap-3">
               <Button onClick={toggleTheme} variant="ghost" className="!h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label="Toggle theme">
-                {theme === 'dark' ? <AnimatedIcon icon={FiSun} tone="yellow" size={18} /> : <AnimatedIcon icon={FiMoon} tone="blue" size={18} />}
+                {theme === 'dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
               </Button>
 
               <Button href="/notifications" variant="ghost" className="relative !h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label="Notifications">
-                <AnimatedIcon icon={FiBell} tone="red" size={18} />
+                <FiBell size={18} />
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white border-2 border-white">
                     {unreadCount}
@@ -97,7 +97,7 @@ export default function Navbar() {
               </Button>
 
               <Button href="/cart" variant="ghost" className="relative !h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label="Open cart">
-                <AnimatedIcon icon={FiShoppingCart} tone="blue" size={18} />
+                <FiShoppingCart size={18} />
                 {totalItems > 0 && (
                   <span className="absolute -right-2 -top-2 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-semibold text-white">
                     {totalItems}
@@ -112,7 +112,7 @@ export default function Navbar() {
                     onClick={() => setMenuOpen(!menuOpen)}
                     className="!h-12 !w-12 !rounded-2xl !px-0 !py-0"
                   >
-                    <AnimatedIcon icon={FiMenu} tone="gray" size={20} />
+                    <FiMenu size={20} />
                   </Button>
                   
                   {menuOpen && (
@@ -126,35 +126,35 @@ export default function Navbar() {
                         
                         <div className="flex flex-col gap-1">
                           <Link href="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
-                            <AnimatedIcon icon={FiActivity} tone="blue" size={16} />
+                            <FiActivity size={16} />
                             Command Center
                           </Link>
                           <Link href="/earnings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
-                            <AnimatedIcon icon={FiTrendingUp} tone="emerald" size={16} />
+                            <FiTrendingUp size={16} />
                             Earnings Analytics
                           </Link>
                           <Link href="/profile" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
-                            <AnimatedIcon icon={FiUser} tone="blue" size={16} />
+                            <FiUser size={16} />
                             Profile
                           </Link>
                           <Link href="/favorites" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
-                            <AnimatedIcon icon={FiHeart} tone="red" size={16} />
+                            <FiHeart size={16} />
                             Favorites
                           </Link>
                           <Link href="/listings/mine" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
-                            <AnimatedIcon icon={FiPackage} tone="blue" size={16} />
+                            <FiPackage size={16} />
                             Your Items
                           </Link>
                           <Link href="/bookings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
-                            <AnimatedIcon icon={FiClock} tone="blue" size={16} />
+                            <FiClock size={16} />
                             Previous Orders
                           </Link>
                           <Link href="/help" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[rgba(36,60,45,0.06)] hover:text-brand-700" onClick={() => setMenuOpen(false)}>
-                            <AnimatedIcon icon={FiMessageCircle} tone="blue" size={16} />
+                            <FiMessageCircle size={16} />
                             Help & Support
                           </Link>
                           <Button variant="ghost" onClick={() => { logout(); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 !justify-start">
-                            <AnimatedIcon icon={FiLogOut} tone="red" size={16} />
+                            <FiLogOut size={16} />
                             Sign out
                           </Button>
                         </div>
@@ -164,7 +164,7 @@ export default function Navbar() {
                 </div>
               ) : (
                 <Button href={`/auth/login?redirect=${encodeURIComponent(router.asPath)}`} variant="primary" className="!px-4 !py-2 md:!px-5 md:!py-3">
-                  <AnimatedIcon icon={FiUser} tone="blue" size={16} />
+                  <FiUser size={16} />
                   <span className="hidden sm:inline">Sign in</span>
                 </Button>
               )}
@@ -211,7 +211,7 @@ export default function Navbar() {
                 {user.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
-                  <AnimatedIcon icon={FiUser} tone="blue" size={16} className="text-slate-400" />
+                  <FiUser size={16} className="text-slate-400" />
                 )}
               </Link>
             ) : (
@@ -227,13 +227,13 @@ export default function Navbar() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-[rgba(15,23,42,0.06)] pb-safe shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.05)]">
         <div className="flex items-center justify-around px-2 py-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
           <Link href="/listings" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname === '/listings' || router.pathname.startsWith('/listings') ? 'text-brand-600' : 'text-slate-400'}`}>
-            <AnimatedIcon icon={FiCompass} tone="blue" size={22} />
+            <FiCompass size={22} />
             <span className="text-[10px] font-semibold">Discover</span>
           </Link>
 
           <Link href="/listings/new" className="flex flex-col items-center gap-0.5 text-slate-400">
             <div className="bg-brand-600 text-white p-2.5 rounded-full -mt-4 shadow-lg shadow-brand-500/30">
-              <AnimatedIcon icon={FiPackage} tone="blue" size={20} />
+              <FiPackage size={20} />
             </div>
             <span className="text-[10px] font-semibold mt-0.5">Host</span>
           </Link>
@@ -241,7 +241,7 @@ export default function Navbar() {
           {user ? (
             <>
               <Link href="/chat" className={`relative flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/chat') ? 'text-brand-600' : 'text-slate-400'}`}>
-                <AnimatedIcon icon={FiMessageCircle} tone="blue" size={22} />
+                <FiMessageCircle size={22} />
                 {unreadChats > 0 && (
                   <span className="absolute top-0 right-2 inline-flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-red-500 px-1 text-[8px] font-bold text-white">
                     {unreadChats > 9 ? '9+' : unreadChats}
@@ -250,13 +250,13 @@ export default function Navbar() {
                 <span className="text-[10px] font-semibold">Chat</span>
               </Link>
               <Link href="/bookings" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/bookings') ? 'text-brand-600' : 'text-slate-400'}`}>
-                <AnimatedIcon icon={FiClock} tone="blue" size={22} />
+                <FiClock size={22} />
                 <span className="text-[10px] font-semibold">Orders</span>
               </Link>
             </>
           ) : (
             <Link href={`/auth/login?redirect=${encodeURIComponent(router.asPath)}`} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-slate-400">
-              <AnimatedIcon icon={FiUser} tone="blue" size={22} />
+              <FiUser size={22} />
               <span className="text-[10px] font-semibold">Sign in</span>
             </Link>
           )}

@@ -20,33 +20,12 @@ if (isProduction) {
   }
 
   // Warn about missing optional but recommended vars
-  const recommended = ['REDIS_URL', 'SMTP_HOST', 'SENTRY_DSN'];
+  const recommended = ['SMTP_HOST'];
   const missingRecommended = recommended.filter(key => !process.env[key]);
   if (missingRecommended.length > 0) {
     console.warn(`⚠️  Optional vars not set: ${missingRecommended.join(', ')}`);
     console.warn('Some features may be limited in production.');
   }
-}
-
-// Sentry Error Monitoring Integration
-// ---------------------------------
-// Tracks errors in production and provides insights for debugging.
-// Initialize Sentry early in the request lifecycle.
-
-const Sentry = require('@sentry/node');
-const { Integrations: { ExpressIntegration } } = require('@sentry/integrations');
-
-if (process.env.SENTRY_DSN && process.env.NODE_ENV === 'production') {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: 'production',
-    release: process.env.npm_package_version || '1.0.0',
-    attachStacktrace: true,
-    tracesIntegration: new ExpressIntegration(),
-    // Performance monitoring - capture 10% of transactions for insights
-    sampleRate: 0.1,
-  });
-  console.log('✅ Sentry error monitoring initialized for production');
 }
 
 // SECURITY: Removed automatic 'prisma db push --accept-data-loss' on production startup.
@@ -59,23 +38,6 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
-// Enhanced Helmet configuration - production gets stricter policies
-const helmetOptions = process.env.NODE_ENV === 'production'
-  ? // Stricter production policies
-    {
-      crossOriginResourcePolicy: false,
-      crossOriginOpenerPolicy: false,
-      // contentSecurityPolicy: false, // Enable if you have a strict CSP
-    }
-  // Development-friendly defaults
-  : {
-    crossOriginResourcePolicy: false,
-    crossOriginOpenerPolicy: false,
-  };
-
-app.use(
-  helmet(helmetOptions)
-);
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const categoryRoutes = require('./routes/category.routes');

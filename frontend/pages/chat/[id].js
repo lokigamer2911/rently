@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import AnimatedIcon from '../../components/AnimatedIcon';
+import { FiSend, FiArrowLeft, FiUser, FiInfo } from 'react-icons/fi';
 import useSWR from 'swr';
 import { fetcher, api } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
@@ -105,14 +105,14 @@ export default function Conversation() {
       <div className="surface-card !p-4 flex items-center justify-between shadow-lg z-10">
         <div className="flex items-center gap-3">
           <Link href="/chat" className="btn-ghost !p-2">
-            <AnimatedIcon icon={FiArrowLeft} tone="gray" size={20} />
+            <FiArrowLeft size={20} />
           </Link>
           <div className="flex items-center gap-3">
             {otherUser.avatarUrl ? (
               <img src={otherUser.avatarUrl} alt={otherUser.name} className="w-10 h-10 rounded-full object-cover" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                <AnimatedIcon icon={FiUser} tone="blue" size={20} />
+                <FiUser size={20} />
               </div>
             )}
             <div>
@@ -125,7 +125,7 @@ export default function Conversation() {
           </div>
         </div>
         <button className="btn-ghost !p-2 text-slate-400">
-          <AnimatedIcon icon={FiInfo} tone="blue" size={20} />
+          <FiInfo size={20} />
         </button>
       </div>
 
@@ -168,7 +168,7 @@ export default function Conversation() {
           disabled={!content.trim()}
           className="btn-primary !p-4 !rounded-2xl shadow-brand disabled:opacity-50 disabled:scale-100 transition-all active:scale-95"
         >
-          <AnimatedIcon icon={FiSend} tone="emerald" size={18} />
+          <FiSend size={18} />
         </button>
       </form>
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import AnimatedIcon from './AnimatedIcon';
+import { FiCamera, FiCheck, FiX, FiShield, FiArrowLeft } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import Button from './Button';
@@ -73,11 +73,11 @@ export default function HandoverModal({ booking, type, onClose, onComplete }) {
                 onClick={() => setStep(1)} 
                 className="p-2 hover:bg-slate-100 rounded-full transition-colors -ml-2"
               >
-                <AnimatedIcon icon={FiArrowLeft} tone="gray" size={18} />
+                <FiArrowLeft size={18} className="text-slate-600" />
               </button>
             )}
             <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
-              <AnimatedIcon icon={FiShield} tone="purple" size={20} />
+              <FiShield size={20} />
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900 capitalize">
@@ -89,7 +89,7 @@ export default function HandoverModal({ booking, type, onClose, onComplete }) {
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <AnimatedIcon icon={FiX} tone="red" size={20} />
+            <FiX size={20} className="text-slate-400" />
           </button>
         </div>
 
@@ -122,7 +122,7 @@ export default function HandoverModal({ booking, type, onClose, onComplete }) {
                 ))}
                 {photos.length < 6 && (
                   <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl hover:border-brand-500 hover:bg-brand-50 transition cursor-pointer group">
-                    <AnimatedIcon icon={FiCamera} tone="blue" size={20} className="text-slate-400 group-hover:text-brand-600" />
+                    <FiCamera className="text-slate-400 group-hover:text-brand-600" size={20} />
                     <span className="text-[9px] mt-1 text-slate-400 group-hover:text-brand-600 font-bold uppercase">Add Photo</span>
                     <input type="file" multiple accept="image/*" capture="environment" className="hidden" onChange={uploadPhotos} />
                   </label>
