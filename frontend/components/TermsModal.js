@@ -1,4 +1,4 @@
-import { FiShield, FiX, FiCheck } from 'react-icons/fi';
+import AnimatedIcon from './AnimatedIcon';
 import Button from './Button';
 
 export default function TermsModal({ isOpen, onClose, onAccept, type }) {
@@ -31,7 +31,7 @@ export default function TermsModal({ isOpen, onClose, onAccept, type }) {
         <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-600 flex items-center justify-center">
-              <FiShield size={24} />
+              <AnimatedIcon icon={FiShield} tone="purple" size={24} />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-900">{isHost ? 'Host' : 'Renter'} Terms & Conditions</h2>
@@ -39,7 +39,7 @@ export default function TermsModal({ isOpen, onClose, onAccept, type }) {
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors shadow-sm">
-            <FiX size={20} className="text-slate-400" />
+            <AnimatedIcon icon={FiX} tone="red" size={20} />
           </button>
         </div>
 
@@ -78,7 +78,7 @@ export default function TermsModal({ isOpen, onClose, onAccept, type }) {
             className="flex-1 !py-4 shadow-brand flex items-center justify-center gap-2" 
             onClick={onAccept}
           >
-            <FiCheck size={18} />
+            <AnimatedIcon icon={FiCheck} tone="emerald" size={18} />
             I Accept the Terms
           </Button>
         </div>

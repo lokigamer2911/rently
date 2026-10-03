@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FiArrowUpRight, FiMapPin, FiShoppingCart, FiStar, FiShield, FiHeart } from 'react-icons/fi';
+import AnimatedIcon from '../components/AnimatedIcon';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/router';
@@ -74,13 +74,13 @@ export default function ListingCard({ l }) {
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(17,24,20,0.62)] via-transparent to-transparent" />
         <button onClick={toggleFavorite} className="absolute right-4 top-4 z-10 p-2.5 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:scale-110 transition-all" type="button">
-          <FiHeart size={16} className={isFavorited ? 'text-red-500 fill-red-500' : 'text-slate-400'} />
+          <AnimatedIcon icon={FiHeart} tone={isFavorited ? 'red' : 'blue'} size="sm" className={isFavorited ? 'rotate-6' : ''} />
         </button>
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           {l.category?.name && <span className="label-pill">{l.category.name}</span>}
           {l.city && (
             <span className="floating-pill">
-              <FiMapPin size={13} />
+              <AnimatedIcon icon={FiMapPin} tone="amber" size="sm" />
               {l.city}
             </span>
           )}
@@ -91,7 +91,7 @@ export default function ListingCard({ l }) {
         <div className="mb-3 flex items-center justify-between gap-3 text-xs uppercase tracking-[0.2em] text-slate-400">
           <span>{l.owner?.name || 'Verified host'}</span>
           <span className="inline-flex items-center gap-1 text-accent-500">
-            <FiStar size={12} />
+            <AnimatedIcon icon={FiStar} tone="amber" size="xs" />
             Curated
           </span>
         </div>
@@ -99,7 +99,7 @@ export default function ListingCard({ l }) {
         <Link href={`/listings/${l.id}`} className="flex flex-1 flex-col">
           <div className="flex items-start justify-between gap-4">
             <h3 className="text-lg sm:text-2xl text-slate-900">{l.title}</h3>
-            <FiArrowUpRight className="mt-1 shrink-0 text-slate-400 transition group-hover:text-brand-600" />
+            <AnimatedIcon icon={FiArrowUpRight} tone="blue" size="sm" className="rotate-6 hover:text-brand-600 transition" />
           </div>
 
           <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500">
@@ -110,7 +110,7 @@ export default function ListingCard({ l }) {
         <div className="soft-divider mt-6 flex items-center justify-between gap-3 pt-4">
           <div>
             <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-400">
-              <FiShield size={10} className="text-brand-600" />
+              <AnimatedIcon icon={FiShield} tone="purple" size="xs" />
               Per Day
             </div>
             <p className="mt-1 text-xl sm:text-2xl font-semibold text-brand-700">Rs {(l.pricePerDay / 100).toFixed(0)}</p>
@@ -120,10 +120,10 @@ export default function ListingCard({ l }) {
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Your Listing</span>
           ) : (
             <button onClick={handleAddToCart} className="btn-secondary !px-4 !py-2.5" type="button">
-              <FiShoppingCart size={16} />
+              <AnimatedIcon icon={FiShoppingCart} tone="blue" size="sm" />
               Add
             </button>
-          )}
+          ))}
         </div>
       </div>
     </div>

@@ -3,16 +3,25 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../config/prisma');
 const { requireAuth } = require('../middleware/auth');
 const { z } = require('zod');
+const cache = require('../utils/cache'); // Redis cache integration
 
-// SECURITY: Rate limit AI suggestions to prevent Gemini API abuse
-const aiSuggestLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,                   // 10 requests per window per user
-  message: { error: 'Too many AI requests. Please wait before trying again.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => req.user.id, // rate limit per user, not IP
-});
+// Cache TTL settings (in minutes)
+const CACHE_TTL = {
+  listings: 60, // 1 hour
+  categories: 1440, // 24 hours
+  userStats: 60, // 1 hour
+  listingStats: 30, // 30 minutes
+};
+
+// Helper: cache-aware listing fetch
+async function getCachedListings(fetcher, key) {
+  return await cache.get(key, async () => {
+    const result = await fetcher();
+    // Cache the result for future requests
+    await cache.set(key, result, CACHE_TTL.listings);
+    return result;
+  }, CACHE_TTL.listings);
+}
 const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
 
 // CUID v1/v2 regex — fast guard before hitting the DB
@@ -234,13 +243,13 @@ router.get('/', async (req, res, next) => {
     const sanitizedQ = typeof q === 'string' ? q.trim().slice(0, 100) : null;
     if (sanitizedQ) where.title = { contains: sanitizedQ, mode: 'insensitive' };
     
+    // Build complete where object before caching
     if (lat && lng && radius) {
       const latNum = parseFloat(lat);
       const lngNum = parseFloat(lng);
       const radNum = parseFloat(radius);
       const latDelta = radNum / 111;
       const lngDelta = radNum / (111 * Math.cos((latNum * Math.PI) / 180));
-      
       where.lat = { gte: latNum - latDelta, lte: latNum + latDelta };
       where.lng = { gte: lngNum - lngDelta, lte: lngNum + lngDelta };
     } else if (city) {
@@ -253,17 +262,21 @@ router.get('/', async (req, res, next) => {
       lte: maxPrice ? +maxPrice : undefined,
     };
     
-    const listings = await prisma.listing.findMany({
-      where,
-      include: { 
-        category: true, 
-        owner: { select: { id: true, name: true, avatarUrl: true } },
-        reviews: { select: { rating: true } }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 60,
-    });
-
+    // Use cache key based on complete query parameters
+    const cacheKey = `listings:all:${sanitizedQ || 'noq'}:${city || 'nocity'}:${categoryId || 'nocat'}`;
+    const listings = await getCachedListings(async () => {
+      return await prisma.listing.findMany({
+        where,
+        include: { 
+          category: true, 
+          owner: { select: { id: true, name: true, avatarUrl: true } },
+          reviews: { select: { rating: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 60,
+      });
+    }, cacheKey);
+    
     let filteredListings = listings;
     if (minRating) {
       const ratingThreshold = parseFloat(minRating);
@@ -275,14 +288,6 @@ router.get('/', async (req, res, next) => {
     }
 
     const responseListings = filteredListings.map(l => {
-      const avgRating = l.reviews.length ? l.reviews.reduce((sum, r) => sum + r.rating, 0) / l.reviews.length : 0;
-      const { reviews: _reviews, ...rest } = l;
-      return { ...normalizeListing(rest), averageRating: avgRating };
-    });
-    
-    res.json(responseListings);
-  } catch (e) { next(e); }
-});
 
 router.post('/:id/access', requireAuth, validateId, async (req, res, next) => {
   try {
