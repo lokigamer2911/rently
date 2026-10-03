@@ -1,6 +1,32 @@
 // backend/src/app.js
 require('dotenv').config(); // Reload env config
 const logger = require('./utils/logger');
+const requestId = require('./utils/requestId'); // Add request ID middleware
+
+// PRODUCTION ENVIRONMENT VALIDATION
+// -----------------------------------
+// Ensures critical variables are present before server starts.
+// In production, missing vars cause immediate exit to prevent misconfiguration.
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  const productionRequired = ['DATABASE_URL', 'JWT_SECRET', 'CLIENT_URL', 'PORT'];
+  const missing = productionRequired.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(`❌ CRITICAL: Missing production environment variables: ${missing.join(', ')}`);
+    console.error('Exiting to prevent misconfigured production startup.');
+    process.exit(1);
+  }
+
+  // Warn about missing optional but recommended vars
+  const recommended = ['SMTP_HOST'];
+  const missingRecommended = recommended.filter(key => !process.env[key]);
+  if (missingRecommended.length > 0) {
+    console.warn(`⚠️  Optional vars not set: ${missingRecommended.join(', ')}`);
+    console.warn('Some features may be limited in production.');
+  }
+}
 
 // SECURITY: Removed automatic 'prisma db push --accept-data-loss' on production startup.
 // That command silently drops columns/data on schema drift — catastrophic for production.
@@ -12,7 +38,6 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
-// Routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const categoryRoutes = require('./routes/category.routes');
@@ -32,6 +57,9 @@ const { registerSocket } = require('./sockets');
 const { csrfProtection, csrfTokenEndpoint } = require('./middleware/csrf');
 
 const app = express();
+
+// Request ID middleware for distributed tracing
+app.use(requestId);
 
 // Security headers with CORS-friendly configuration
 app.use(
@@ -73,7 +101,7 @@ const adminKeyLimiter = rateLimit({
 
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 10, // Reduced from 20 to prevent Gemini API abuse and control costs
   message: { error: 'AI suggestion limit reached, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -178,12 +206,13 @@ app.use('/api/disputes', disputeRoutes);
 app.use('/api/favorites', favoriteRoutes);
 
 // Global error handler
-app.use((err, _req, res, _next) => {
-  logger.error('Unhandled Server Error:', err);
+app.use((err, req, res, _next) => {
+  logger.error(`[Request ID: ${req.id}] Unhandled Server Error:`, err);
   const isProd = process.env.NODE_ENV === 'production';
-  res.status(err.status || 500).json({
-    error: isProd ? 'Internal server error' : (err.message || 'Server error'),
-  });
+  // In production, mask internal error details to prevent information leakage
+  const errorMsg = isProd ? 'Internal server error' : (err.message || 'Server error');
+  const statusCode = err.status || 500;
+  res.status(statusCode).json({ error: errorMsg });
 });
 
 module.exports = { app, registerSocket, allowedOrigins };
