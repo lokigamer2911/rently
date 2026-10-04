@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -9,7 +9,6 @@ import { api } from '../lib/api';
 import Button from '../components/Button';
 import TermsModal from '../components/TermsModal';
 import TiltCard from '../components/TiltCard';
-import UpiPaymentModal from '../components/UpiPaymentModal';
 
 export default function Cart() {
   const { cart, removeFromCart, clearCart } = useCart();
@@ -19,12 +18,8 @@ export default function Cart() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
-  // Payment mode is decided by the backend so the gateway can be switched on
-  // with an env var, with no frontend deploy.
-  const [upiIntent, setUpiIntent] = useState(null);
-  const [upiOpen, setUpiOpen] = useState(false);
+  // Razorpay-only checkout (personal account).
   const [razorpayEnabled, setRazorpayEnabled] = useState(null);
-  const upiResolverRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,25 +28,6 @@ export default function Cart() {
       .catch(() => { if (!cancelled) setRazorpayEnabled(false); });
     return () => { cancelled = true; };
   }, []);
-
-  /**
-   * Show the UPI QR modal for one booking and settle once the renter has either
-   * been verified or dismissed it. Resolves false when they walked away, so the
-   * caller can leave the booking pending instead of marking it paid.
-   */
-  const payViaUpi = (intent) => new Promise((resolve) => {
-    upiResolverRef.current = resolve;
-    setUpiIntent(intent);
-    setUpiOpen(true);
-  });
-
-  const closeUpiModal = (verified) => {
-    setUpiOpen(false);
-    setUpiIntent(null);
-    const resolve = upiResolverRef.current;
-    upiResolverRef.current = null;
-    resolve?.(verified);
-  };
 
   const getLocalDatetime = (date = new Date()) => {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -139,8 +115,8 @@ export default function Cart() {
       return;
     }
 
-    // Razorpay checkout.js is only needed when the gateway is actually live.
-    if (razorpayEnabled && (typeof window === 'undefined' || !window.Razorpay)) {
+    // Razorpay checkout.js must be loaded for the gateway.
+    if (typeof window === 'undefined' || !window.Razorpay) {
       toast.error('Payment gateway is still loading. Please try again.');
       return;
     }
@@ -163,28 +139,9 @@ export default function Cart() {
           depositNote: dates.depositNote || '',
         });
 
-        if (razorpayEnabled) {
-          const { data: order } = await api.post('/payments/order', { bookingId: booking.id });
-          await openCheckout(item, order);
-          paidItems.push(item.id);
-          continue;
-        }
-
-        const { data: intent } = await api.post('/payments/upi/intent', { bookingId: booking.id });
-        if (intent.alreadyPaid) {
-          paidItems.push(item.id);
-          continue;
-        }
-
-        const verified = await payViaUpi(intent);
-        if (!verified) {
-          // Booking is saved and sits as payment-pending — let them finish later.
-          toast(
-            `${item.title} is booked, but payment is still pending. You can finish it any time from My Bookings.`,
-            { icon: '⏳', duration: 7000 },
-          );
-          break;
-        }
+        // Razorpay-only: create an order and open checkout.
+        const { data: order } = await api.post('/payments/order', { bookingId: booking.id });
+        await openCheckout(item, order);
         paidItems.push(item.id);
       }
 
@@ -387,13 +344,6 @@ export default function Cart() {
           setShowTerms(false);
           proceedToCheckout();
         }} 
-      />
-
-      <UpiPaymentModal
-        isOpen={upiOpen}
-        intent={upiIntent}
-        onClose={() => closeUpiModal(false)}
-        onVerified={() => closeUpiModal(true)}
       />
     </>
   );

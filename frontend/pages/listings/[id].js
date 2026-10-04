@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
-import UpiPaymentModal from '../../components/UpiPaymentModal';
 import { useRouter } from 'next/router';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
@@ -69,10 +68,8 @@ export default function ListingDetail({ initialListing }) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  // Checkout runs on the UPI QR fallback until the Razorpay gateway is switched on.
+  // Razorpay-only checkout (personal account).
   const [razorpayEnabled, setRazorpayEnabled] = useState(null);
-  const [upiIntent, setUpiIntent] = useState(null);
-  const [upiOpen, setUpiOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,7 +199,7 @@ export default function ListingDetail({ initialListing }) {
       if (overlap) return toast.error('Selected dates overlap with host blocked dates');
     }
 
-    if (razorpayEnabled && (typeof window === 'undefined' || !window.Razorpay)) {
+    if (typeof window === 'undefined' || !window.Razorpay) {
       return toast.error('Payment gateway is still loading. Please try again.');
     }
     
@@ -219,18 +216,6 @@ export default function ListingDetail({ initialListing }) {
         depositType,
         depositNote
       });
-
-      if (!razorpayEnabled) {
-        const { data: intent } = await api.post('/payments/upi/intent', { bookingId: booking.id });
-        if (intent.alreadyPaid) {
-          toast.success('Payment already confirmed');
-          router.push('/bookings');
-          return;
-        }
-        setUpiIntent(intent);
-        setUpiOpen(true);
-        return;
-      }
 
       const { data: order } = await api.post('/payments/order', { bookingId: booking.id });
 
@@ -714,13 +699,6 @@ export default function ListingDetail({ initialListing }) {
           setShowTerms(false);
           book();
         }} 
-      />
-
-      <UpiPaymentModal
-        isOpen={upiOpen}
-        intent={upiIntent}
-        onClose={() => { setUpiOpen(false); setUpiIntent(null); }}
-        onVerified={() => { setUpiOpen(false); setUpiIntent(null); router.push('/bookings'); }}
       />
 
       {/* Mobile Sticky Booking Bar */}

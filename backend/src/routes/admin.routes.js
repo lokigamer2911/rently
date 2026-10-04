@@ -3,11 +3,9 @@ const prisma = require('../config/prisma');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { requireAdminKey } = require('../middleware/adminKey');
 const { z } = require('zod');
-const {
-  STATUS,
-  rejectUpiPayment,
-  settlePayment,
-} = require('../services/payment.service');
+// NOTE: manual UPI payment verification was removed (Razorpay-only checkout).
+// This router keeps users/stats/listings management. Payment verification
+// endpoints were intentionally deleted.
 
 const CUID_RE = /^[a-z0-9]{20,}$/i;
 function validateId(req, res, next) {
@@ -65,151 +63,6 @@ router.patch('/users/:id/role', validateId, async (req, res, next) => {
       select: { id: true, email: true, phone: true, name: true, role: true, createdAt: true },
     });
     res.json(user);
-  } catch (e) { next(e); }
-});
-
-/**
- * UPI payments renters say they've paid, newest first.
- * `status=ALL` includes settled/rejected rows for the history view.
- */
-router.get('/payments', async (req, res, next) => {
-  try {
-    const status = String(req.query.status || STATUS.AWAITING_VERIFICATION).toUpperCase();
-    const where = status === 'ALL'
-      ? { method: 'UPI_QR' }
-      : { method: 'UPI_QR', status };
-
-    const payments = await prisma.payment.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-      include: {
-        booking: {
-          include: {
-            listing: { select: { id: true, title: true, city: true, ownerId: true } },
-            renter: { select: { id: true, name: true, email: true, phone: true } },
-          },
-        },
-      },
-    });
-
-    res.json(payments.map((payment) => ({
-      id: payment.id,
-      status: payment.status,
-      method: payment.method,
-      amount: payment.amount,
-      ref: payment.upiRef,
-      payeeVpa: payment.upiPayeeVpa,
-      utr: payment.payerUtr,
-      note: payment.payerNote,
-      proofUrl: payment.proofUrl,
-      rejectionReason: payment.rejectionReason,
-      createdAt: payment.createdAt,
-      verifiedAt: payment.verifiedAt,
-      bookingId: payment.bookingId,
-      bookingStatus: payment.booking?.status || null,
-      listingTitle: payment.booking?.listing?.title || null,
-      listingCity: payment.booking?.listing?.city || null,
-      renterName: payment.booking?.renter?.name || null,
-      renterEmail: payment.booking?.renter?.email || null,
-      renterPhone: payment.booking?.renter?.phone || null,
-    })));
-  } catch (e) { next(e); }
-});
-
-/**
- * Confirm the money actually landed in the bank/UPI account.
- * This is the step that flips the booking to CONFIRMED — check your bank or
- * UPI app for a credit of `amount` with `utr`/`ref` before clicking.
- */
-router.post('/payments/:id/verify', validateId, async (req, res, next) => {
-  try {
-    const payment = await prisma.payment.findUnique({ where: { id: req.params.id } });
-    if (!payment) return res.status(404).json({ error: 'Payment not found' });
-    if (payment.method !== 'UPI_QR') {
-      return res.status(409).json({ error: 'Only UPI QR payments are verified by hand' });
-    }
-
-    const result = await settlePayment({
-      paymentId: payment.id,
-      verifiedById: req.user.id,
-      io: req.app.get('io'),
-    });
-
-    if (!result.ok) {
-      return res.status(result.reason === 'payment_not_found' ? 404 : 400)
-        .json({ error: 'Could not verify this payment' });
-    }
-
-    res.json({ ok: true, bookingId: result.bookingId, alreadyProcessed: result.alreadyProcessed });
-  } catch (e) { next(e); }
-});
-
-/**
- * Read-only audit record for one payment: everything an owner needs to prove
- * who confirmed what, when, and against which bank credit. Safe to paste into
- * a dispute ticket.
- */
-router.get('/payments/:id/receipt', validateId, async (req, res, next) => {
-  try {
-    const payment = await prisma.payment.findUnique({
-      where: { id: req.params.id },
-      include: {
-        booking: {
-          include: {
-            listing: { select: { id: true, title: true, city: true } },
-            renter: { select: { name: true, email: true, phone: true } },
-          },
-        },
-      },
-    });
-    if (!payment) return res.status(404).json({ error: 'Payment not found' });
-
-    res.json({
-      paymentId: payment.id,
-      method: payment.method,
-      status: payment.status,
-      amount: payment.amount,
-      ref: payment.upiRef,
-      payeeVpa: payment.upiPayeeVpa,
-      payeeName: payment.upiPayeeName,
-      utr: payment.payerUtr,
-      renterNote: payment.payerNote,
-      proofUrl: payment.proofUrl,
-      razorpayPaymentId: payment.razorpayPaymentId || null,
-      rejectionReason: payment.rejectionReason,
-      verifiedAt: payment.verifiedAt,
-      verifiedByKey: req.adminKeyId,
-      booking: payment.booking
-        ? {
-            id: payment.booking.id,
-            status: payment.booking.status,
-            startDate: payment.booking.startDate,
-            endDate: payment.booking.endDate,
-            listingTitle: payment.booking.listing?.title || null,
-            listingCity: payment.booking.listing?.city || null,
-            renter: payment.booking.renter || null,
-          }
-        : null,
-      generatedAt: new Date().toISOString(),
-    });
-  } catch (e) { next(e); }
-});
-
-router.post('/payments/:id/reject', validateId, async (req, res, next) => {
-  try {
-    const { reason } = z.object({
-      reason: z.string().trim().max(300).optional().default(''),
-    }).parse(req.body || {});
-
-    const payment = await prisma.payment.findUnique({ where: { id: req.params.id } });
-    if (!payment) return res.status(404).json({ error: 'Payment not found' });
-    if (payment.status === STATUS.PAID) {
-      return res.status(409).json({ error: 'This payment is already marked as paid' });
-    }
-
-    await rejectUpiPayment({ paymentId: payment.id, reason, verifiedById: req.user.id });
-    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 

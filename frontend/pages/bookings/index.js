@@ -8,7 +8,6 @@ import Button from '../../components/Button';
 import HandoverModal from '../../components/HandoverModal';
 import ReviewModal from '../../components/ReviewModal';
 import ConditionTimeline from '../../components/ConditionTimeline';
-import UpiPaymentModal from '../../components/UpiPaymentModal';
 import { generateAgreement } from '../../lib/pdf';
 import { useAuth } from '../../hooks/useAuth';
 import TiltCard from '../../components/TiltCard';
@@ -41,10 +40,8 @@ export default function Bookings() {
   const { user } = useAuth();
   const { data: list, mutate } = useSWR(tab === 'mine' ? '/bookings/mine' : '/bookings/incoming', fetcher);
 
-  // Lets a renter resume a QR payment they abandoned mid-checkout.
+  // Razorpay-only checkout (personal account).
   const [razorpayEnabled, setRazorpayEnabled] = useState(null);
-  const [upiIntent, setUpiIntent] = useState(null);
-  const [upiOpen, setUpiOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,18 +51,29 @@ export default function Bookings() {
     return () => { cancelled = true; };
   }, []);
 
-  const resumeUpiPayment = async (booking) => {
+  const payNowWithRazorpay = async (booking) => {
     try {
-      const { data: intent } = await api.post('/payments/upi/intent', { bookingId: booking.id });
-      if (intent.alreadyPaid) {
-        toast.success('This booking is already paid');
-        mutate();
+      if (typeof window === 'undefined' || !window.Razorpay) {
+        toast.error('Payment gateway is still loading. Please try again.');
         return;
       }
-      setUpiIntent(intent);
-      setUpiOpen(true);
+      const { data: order } = await api.post('/payments/order', { bookingId: booking.id });
+      const rzp = new window.Razorpay({
+        key: order.key,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.orderId,
+        name: 'Rently',
+        description: 'Booking payment',
+        handler: async (response) => {
+          await api.post('/payments/verify', response);
+          toast.success('Payment successful');
+          mutate();
+        },
+      });
+      rzp.open();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Could not load the payment details');
+      toast.error(error.response?.data?.error || 'Could not start the payment');
     }
   };
 
@@ -294,14 +302,14 @@ export default function Bookings() {
                   {tab === 'mine' && b.status === 'PENDING' && (
                     <Button variant="ghost" className="!py-2.5 !px-4 text-red-600 hover:bg-red-50" onClick={() => handleCancel(b)}>Cancel Request</Button>
                   )}
-                  {tab === 'mine' && b.status === 'PENDING' && razorpayEnabled === false && (
+                  {tab === 'mine' && b.status === 'PENDING' && (
                     <Button
                       variant="primary"
                       className="!py-2.5 !px-5 flex items-center gap-2"
-                      onClick={() => resumeUpiPayment(b)}
+                      onClick={() => payNowWithRazorpay(b)}
                     >
                       <FiCreditCard size={14} />
-                      {b.payment?.status === 'AWAITING_VERIFICATION' ? 'Under review' : 'Pay via UPI QR'}
+                      Pay now
                     </Button>
                   )}
                   {b.status === 'COMPLETED' && (
@@ -491,13 +499,6 @@ export default function Bookings() {
           onClose={() => setTimelineBooking(null)}
         />
       )}
-
-      <UpiPaymentModal
-        isOpen={upiOpen}
-        intent={upiIntent}
-        onClose={() => { setUpiOpen(false); setUpiIntent(null); mutate(); }}
-        onVerified={() => { setUpiOpen(false); setUpiIntent(null); mutate(); }}
-      />
     </div>
   );
 }
