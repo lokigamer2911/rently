@@ -48,12 +48,7 @@ Go to: **Render Dashboard → Your Service → Environment**
 | `RAZORPAY_KEY_ID` | `rzp_test_xxxxx` | Razorpay test/live keys |
 | `RAZORPAY_KEY_SECRET` | `xxxxx` | Razorpay secret |
 | `RAZORPAY_WEBHOOK_SECRET` | `xxxxx` | Razorpay webhook signing secret |
-| `PAYMENTS_RAZORPAY_ENABLED` | `false` | `true` only once Razorpay is live. While `false`, checkout uses the UPI QR fallback |
-| `UPI_PAYEES` | `[{"vpa":"9550304441@ybl","name":"ALLU HEMACHARAN","label":"Founder"}]` | UPI IDs for you + co-founders, handed out round-robin per booking |
-| `UPI_VPA` | `9550304441@ybl` | Shorthand when you only have one UPI ID (founder's PhonePe/SBI QR) |
-| `UPI_PAYEE_NAME` | `ALLU HEMACHARAN` | Payee name shown in the UPI app |
-| `UPI_STATIC_QR_IMAGE_URL` | `https://res.cloudinary.com/.../qr.png` | Optional: your own UPI QR image, shown under the generated one |
-| `PAYMENTS_SUPPORT_CONTACT` | `payments@rently.in` | Optional: shown when a payment needs matching by hand |
+| `PAYMENTS_RAZORPAY_ENABLED` | `true` | Legacy flag, no longer used — checkout is Razorpay-only whenever keys are present |
 | `ADMIN_KEY_HASH` | `90a4b9863c02…` (64 hex chars) | **REQUIRED for /admin** — SHA-256 of the admin access key. Only the hash goes here; the raw key is known only to the owner |
 | `ADMIN_KEY_ID` | `founder-key-1` | Short public label stamped into admin receipts |
 | `GEMINI_API_KEY` | `AIzaSy...` | Google Gemini (for AI suggestions) |

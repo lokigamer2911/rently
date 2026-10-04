@@ -1,13 +1,10 @@
 const express = require('express');
 const request = require('supertest');
 
-// The UPI config module caches payees on first read, like it does in production
-// where env vars are fixed at boot — so configure them before requiring routes.
-process.env.UPI_PAYEES = JSON.stringify([
-  { vpa: 'founder@okhdfcbank', name: 'Rently', label: 'Founder' },
-  { vpa: 'cofounder@ybl', name: 'Rently', label: 'Co-founder' },
-]);
-process.env.PAYMENTS_RAZORPAY_ENABLED = 'false';
+// Razorpay-only checkout — no UPI fallback. Configure gateway keys before
+// requiring routes (same as production, where env vars are fixed at boot).
+process.env.RAZORPAY_KEY_ID = 'rzp_test_123';
+process.env.RAZORPAY_KEY_SECRET = 'test_secret_123';
 
 // Ids must satisfy the admin router's cuid-ish validator: [a-z0-9]{20,}
 const PAYMENT_ID = 'clxpayment0000000000001';
@@ -64,6 +61,7 @@ jest.mock('../src/middleware/auth', () => ({
 }));
 
 const prisma = require('../src/config/prisma');
+const razorpay = require('../src/config/razorpay');
 const { createNotification } = require('../src/utils/notifications');
 
 // Admin routes now also require the platform admin key. Configure a test hash
@@ -88,6 +86,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   asRenter();
   process.env.RAZORPAY_WEBHOOK_SECRET = 'test_webhook_secret_123';
+  process.env.RAZORPAY_KEY_ID = 'rzp_test_123';
+  process.env.RAZORPAY_KEY_SECRET = 'test_secret_123';
 });
 
 describe('Payment webhook idempotency', () => {
@@ -148,285 +148,82 @@ describe('Payment webhook idempotency', () => {
 });
 
 describe('GET /payments/config', () => {
-  it('announces the in-progress gateway and the UPI fallback', async () => {
+  it('announces the Razorpay-only checkout', async () => {
+    const res = await request(app).get('/api/payments/config').expect(200);
+
+    expect(res.body.razorpayEnabled).toBe(true);
+    expect(res.body.upiQrEnabled).toBe(false);
+    expect(res.body.method).toBe('RAZORPAY');
+  });
+
+  it('reports missing keys when Razorpay is not configured', async () => {
+    delete process.env.RAZORPAY_KEY_ID;
     const res = await request(app).get('/api/payments/config').expect(200);
 
     expect(res.body.razorpayEnabled).toBe(false);
-    expect(res.body.upiQrEnabled).toBe(true);
-    expect(res.body.method).toBe('UPI_QR');
-    expect(res.body.notice).toMatch(/razorpay integration is in progress/i);
-    expect(res.body.payeeCount).toBe(2);
+    expect(res.body.notice).toMatch(/not configured/i);
   });
 });
 
-describe('POST /payments/upi/intent', () => {
+describe('POST /payments/order', () => {
   const mockBooking = {
     id: BOOKING_ID,
     renterId: RENTER_ID,
     totalAmount: 129900,
     status: 'PENDING',
-    listing: { title: 'Sony A7 III' },
   };
 
-  it('returns a UPI deep link carrying the exact amount and a reference', async () => {
+  it('creates a Razorpay order for the renter', async () => {
     prisma.booking.findUnique.mockResolvedValueOnce(mockBooking);
-    prisma.payment.findUnique.mockResolvedValueOnce(null);
-    prisma.payment.upsert.mockImplementationOnce(async ({ create }) => ({
-      id: PAYMENT_ID, status: 'CREATED', ...create,
-    }));
-
-    const res = await request(app)
-      .post('/api/payments/upi/intent')
-      .send({ bookingId: BOOKING_ID })
-      .expect(200);
-
-    expect(res.body.amount).toBe(129900);
-    expect(res.body.amountRupees).toBe('1299.00');
-    expect(res.body.ref).toMatch(/^RTX[A-Z2-9]{6}$/);
-    expect(res.body.payee.vpa).toMatch(/@/);
-    expect(res.body.upiLink).toContain('am=1299.00');
-    expect(res.body.upiLink).toContain(`tr=${res.body.ref}`);
-    expect(res.body.upiLink.startsWith('upi://pay?')).toBe(true);
-  });
-
-  it('keeps the same payee and reference when reopened', async () => {
-    prisma.booking.findUnique.mockResolvedValueOnce(mockBooking);
-    prisma.payment.findUnique.mockResolvedValueOnce({
-      id: PAYMENT_ID, status: 'CREATED', upiRef: 'RTXKEEP01', upiPayeeVpa: 'cofounder@ybl',
+    razorpay.orders.create.mockResolvedValueOnce({
+      id: 'order_test123', amount: 129900, currency: 'INR',
     });
-    prisma.payment.upsert.mockImplementationOnce(async ({ update }) => ({
-      id: PAYMENT_ID, status: 'CREATED', upiRef: 'RTXKEEP01', ...update,
-    }));
+    prisma.payment.upsert.mockResolvedValueOnce({ id: PAYMENT_ID });
 
     const res = await request(app)
-      .post('/api/payments/upi/intent')
+      .post('/api/payments/order')
       .send({ bookingId: BOOKING_ID })
       .expect(200);
 
-    expect(res.body.ref).toBe('RTXKEEP01');
-    expect(res.body.payee.vpa).toBe('cofounder@ybl');
+    expect(res.body.orderId).toBe('order_test123');
+    expect(res.body.key).toBe('rzp_test_123');
+    expect(prisma.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { bookingId: BOOKING_ID },
+    }));
   });
 
-  it("refuses to build an intent for someone else's booking", async () => {
+  it("refuses to build an order for someone else's booking", async () => {
     prisma.booking.findUnique.mockResolvedValueOnce({ ...mockBooking, renterId: 'someone-else' });
 
     await request(app)
-      .post('/api/payments/upi/intent')
+      .post('/api/payments/order')
       .send({ bookingId: BOOKING_ID })
       .expect(403);
   });
 
-  it('returns 404 for an unknown booking', async () => {
-    prisma.booking.findUnique.mockResolvedValueOnce(null);
-    await request(app).post('/api/payments/upi/intent').send({ bookingId: BOOKING_ID }).expect(404);
-  });
-});
-
-describe('POST /payments/upi/claim', () => {
-  const claimBody = { paymentId: PAYMENT_ID, utr: '402312345678' };
-
-  it('parks the payment in AWAITING_VERIFICATION and alerts the admins', async () => {
-    prisma.payment.findUnique
-      .mockResolvedValueOnce({ id: PAYMENT_ID, bookingId: BOOKING_ID, status: 'CREATED', upiRef: 'RTXABC123' })
-      .mockResolvedValueOnce({
-        id: PAYMENT_ID,
-        upiRef: 'RTXABC123',
-        status: 'CREATED',
-        booking: {
-          renter: { name: 'Asha' },
-          listing: { title: 'Sony A7 III' },
-        },
-      });
-    prisma.booking.findUnique.mockResolvedValueOnce({ id: BOOKING_ID, renterId: RENTER_ID });
-    prisma.payment.update.mockResolvedValueOnce({});
-    prisma.user.findMany.mockResolvedValueOnce([{ id: ADMIN_ID }]);
-
-    const res = await request(app).post('/api/payments/upi/claim').send(claimBody).expect(200);
-
-    expect(res.body.status).toBe('AWAITING_VERIFICATION');
-    expect(res.body.alreadyPaid).toBe(false);
-    expect(prisma.payment.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: 'AWAITING_VERIFICATION', payerUtr: '402312345678' }),
-    }));
-    expect(createNotification).toHaveBeenCalledTimes(1);
-    expect(createNotification.mock.calls[0][1].link).toBe('/admin?tab=payments');
-  });
-
-  it('does not confirm the booking — only the UTR is recorded', async () => {
-    prisma.payment.findUnique
-      .mockResolvedValueOnce({ id: PAYMENT_ID, bookingId: BOOKING_ID, status: 'CREATED' })
-      .mockResolvedValueOnce({ id: PAYMENT_ID, status: 'CREATED', booking: {} });
-    prisma.booking.findUnique.mockResolvedValueOnce({ id: BOOKING_ID, renterId: RENTER_ID });
-    prisma.payment.update.mockResolvedValueOnce({});
-    prisma.user.findMany.mockResolvedValueOnce([]);
-
-    await request(app).post('/api/payments/upi/claim').send(claimBody).expect(200);
-
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(prisma.booking.update).not.toHaveBeenCalled();
-  });
-
-  it('rejects a UTR that is too short to be real', async () => {
-    await request(app)
-      .post('/api/payments/upi/claim')
-      .send({ paymentId: PAYMENT_ID, utr: '123' })
-      .expect(400);
-  });
-
-  it('is idempotent once the payment is already paid', async () => {
-    prisma.payment.findUnique
-      .mockResolvedValueOnce({ id: PAYMENT_ID, bookingId: BOOKING_ID, status: 'PAID' })
-      .mockResolvedValueOnce({ id: PAYMENT_ID, status: 'PAID' });
-    prisma.booking.findUnique.mockResolvedValueOnce({ id: BOOKING_ID, renterId: RENTER_ID });
-
-    const res = await request(app).post('/api/payments/upi/claim').send(claimBody).expect(200);
-
-    expect(res.body.alreadyPaid).toBe(true);
-    expect(prisma.payment.update).not.toHaveBeenCalled();
-  });
-});
-
-describe('GET /payments/upi/:paymentId', () => {
-  it('lets the renter poll their own payment status', async () => {
-    prisma.payment.findUnique.mockResolvedValueOnce({
-      id: PAYMENT_ID,
-      status: 'AWAITING_VERIFICATION',
-      upiRef: 'RTXABC123',
-      amount: 129900,
-      method: 'UPI_QR',
-      booking: { id: BOOKING_ID, status: 'PENDING', renterId: RENTER_ID, totalAmount: 129900 },
-    });
-
-    const res = await request(app).get(`/api/payments/upi/${PAYMENT_ID}`).expect(200);
-    expect(res.body.status).toBe('AWAITING_VERIFICATION');
-  });
-
-  it("hides another renter's payment", async () => {
-    prisma.payment.findUnique.mockResolvedValueOnce({
-      id: PAYMENT_ID,
-      status: 'PAID',
-      booking: { id: BOOKING_ID, status: 'CONFIRMED', renterId: 'someone-else' },
-    });
-
-    await request(app).get(`/api/payments/upi/${PAYMENT_ID}`).expect(403);
-  });
-});
-
-describe('Admin payment verification', () => {
-  it('confirms the booking once the credit is verified', async () => {
-    asAdmin();
-    prisma.payment.findUnique.mockResolvedValueOnce({
-      id: PAYMENT_ID, method: 'UPI_QR', status: 'AWAITING_VERIFICATION', bookingId: BOOKING_ID,
-    });
-    prisma.payment.findFirst.mockResolvedValueOnce({
-      id: PAYMENT_ID, method: 'UPI_QR', status: 'AWAITING_VERIFICATION', bookingId: BOOKING_ID,
-    });
-    prisma.booking.findUnique.mockResolvedValueOnce({
-      id: BOOKING_ID,
-      listingId: LISTING_ID,
-      renterId: RENTER_ID,
-      listing: { id: LISTING_ID, ownerId: 'owner-1', title: 'Sony A7 III' },
-    });
+  it('returns 503 when Razorpay keys are missing', async () => {
+    delete process.env.RAZORPAY_KEY_ID;
+    prisma.booking.findUnique.mockResolvedValueOnce(mockBooking);
 
     const res = await request(app)
-      .post(`/api/admin/payments/${PAYMENT_ID}/verify`)
-      .set(adminKeyHeader)
-      .expect(200);
+      .post('/api/payments/order')
+      .send({ bookingId: BOOKING_ID })
+      .expect(503);
 
-    expect(res.body.ok).toBe(true);
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    // Both the renter and the host get told.
-    expect(createNotification).toHaveBeenCalledTimes(2);
+    expect(res.body.code).toBe('RAZORPAY_NOT_CONFIGURED');
   });
+});
 
-  it('refuses to hand-verify a Razorpay payment', async () => {
-    asAdmin();
-    prisma.payment.findUnique.mockResolvedValueOnce({
-      id: PAYMENT_ID, method: 'RAZORPAY', status: 'CREATED', bookingId: BOOKING_ID,
-    });
-
-    await request(app)
-      .post(`/api/admin/payments/${PAYMENT_ID}/verify`)
-      .set(adminKeyHeader)
-      .expect(409);
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('records a rejection with a reason', async () => {
-    asAdmin();
-    prisma.payment.findUnique.mockResolvedValueOnce({
-      id: PAYMENT_ID, method: 'UPI_QR', status: 'AWAITING_VERIFICATION',
-    });
-    prisma.payment.update.mockResolvedValueOnce({});
-
-    const res = await request(app)
-      .post(`/api/admin/payments/${PAYMENT_ID}/reject`)
-      .set(adminKeyHeader)
-      .send({ reason: 'No matching credit' })
-      .expect(200);
-
-    expect(res.body.ok).toBe(true);
-    expect(prisma.payment.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: 'REJECTED', rejectionReason: 'No matching credit' }),
-    }));
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('will not reject a payment that is already settled', async () => {
-    asAdmin();
-    prisma.payment.findUnique.mockResolvedValueOnce({
-      id: PAYMENT_ID, method: 'UPI_QR', status: 'PAID',
-    });
-
-    await request(app)
-      .post(`/api/admin/payments/${PAYMENT_ID}/reject`)
-      .set(adminKeyHeader)
-      .send({ reason: 'oops' })
-      .expect(409);
-  });
-
+describe('Admin routes (non-payment)', () => {
   it('is closed to non-admins (even with a valid admin key)', async () => {
     asRenter();
-    await request(app).get('/api/admin/payments?status=ALL').set(adminKeyHeader).expect(403);
-    await request(app).post(`/api/admin/payments/${PAYMENT_ID}/verify`).set(adminKeyHeader).expect(403);
+    await request(app).get('/api/admin/stats').set(adminKeyHeader).expect(403);
+    await request(app).get('/api/admin/users').set(adminKeyHeader).expect(403);
   });
 
   it('is closed to admins without the admin key', async () => {
     asAdmin();
-    await request(app).get('/api/admin/payments?status=ALL').expect(401);
-    await request(app).post(`/api/admin/payments/${PAYMENT_ID}/verify`).expect(401);
-  });
-
-  it('lists UPI payments for review', async () => {
-    asAdmin();
-    prisma.payment.findMany.mockResolvedValueOnce([{
-      id: PAYMENT_ID,
-      status: 'AWAITING_VERIFICATION',
-      method: 'UPI_QR',
-      amount: 129900,
-      upiRef: 'RTXABC123',
-      upiPayeeVpa: 'founder@okhdfcbank',
-      payerUtr: '402312345678',
-      createdAt: new Date('2026-09-01T10:00:00Z'),
-      bookingId: BOOKING_ID,
-      booking: {
-        status: 'PENDING',
-        listing: { id: LISTING_ID, title: 'Sony A7 III', city: 'Chennai', ownerId: 'owner-1' },
-        renter: { id: RENTER_ID, name: 'Asha', email: 'asha@example.com', phone: '9999999999' },
-      },
-    }]);
-
-    const res = await request(app)
-      .get('/api/admin/payments?status=ALL')
-      .set(adminKeyHeader)
-      .expect(200);
-
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0]).toMatchObject({
-      utr: '402312345678',
-      ref: 'RTXABC123',
-      listingTitle: 'Sony A7 III',
-      renterName: 'Asha',
-    });
+    await request(app).get('/api/admin/stats').expect(401);
+    await request(app).get('/api/admin/users').expect(401);
   });
 });

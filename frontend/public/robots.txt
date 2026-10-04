@@ -1,11 +1,6 @@
-# Allow all crawlers
+# *
 User-agent: *
 Allow: /
-
-# Disallow admin pages
-User-agent: *
-Disallow: /admin
-Disallow: /auth/
 
 # Host
 Host: https://rently-chi.vercel.app
