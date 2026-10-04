@@ -290,10 +290,9 @@ export default function Cart() {
                 <FiCreditCard size={16} />
               </div>
               <div className="text-xs">
-                <p className="font-bold text-amber-900 uppercase tracking-wider">Razorpay integration is in progress</p>
+                <p className="font-bold text-amber-900 uppercase tracking-wider">Online payments unavailable</p>
                 <p className="text-amber-700 mt-0.5">
-                  Card and netbanking checkout is coming soon. Pay to our UPI QR code instead — your booking is
-                  confirmed as soon as the payment is verified.
+                  The Razorpay gateway is being connected. Checkout will be enabled as soon as it is configured.
                 </p>
               </div>
             </div>
@@ -324,13 +323,13 @@ export default function Cart() {
             variant="primary"
             onClick={proceedToCheckout} 
             className="w-full"
-            disabled={isCheckingOut} 
+            disabled={isCheckingOut || razorpayEnabled === false} 
             type="button"
           >
             {isCheckingOut
               ? 'Processing...'
               : razorpayEnabled === false
-                ? `Pay Rs ${totalPrice.toFixed(2)} via UPI QR`
+                ? 'Payments unavailable'
                 : 'Proceed to Checkout'}
           </Button>
         </div>
