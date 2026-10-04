@@ -14,24 +14,10 @@ if (key_id && key_secret) {
 }
 
 if (!razorpayInstance) {
-  console.warn('Razorpay credentials missing. Payments will run in mock mode.');
-  razorpayInstance = new Proxy({}, {
-    get: (target, prop) => {
-      // Mock orders or payments methods if called
-      if (prop === 'orders') {
-        return {
-          create: async (params) => {
-            console.log('Mocking Razorpay order creation with params:', params);
-            return { id: 'order_mock_' + Math.random().toString(36).substring(7), amount: params.amount, status: 'created' };
-          }
-        };
-      }
-      return () => {
-        console.warn(`Razorpay method "${String(prop)}" called, but Razorpay is not configured.`);
-        return {};
-      };
-    }
-  });
+  // Fail loudly when keys are missing: fabricating orders would write fake
+  // payment rows that look real. Callers must check keys first (see the
+  // 503 guard in POST /payments/order and the try/catch in POST /verify).
+  console.warn('Razorpay credentials missing. Payment endpoints will answer 503 until RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are set.');
 }
 
 module.exports = razorpayInstance;
