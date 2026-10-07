@@ -68,16 +68,9 @@ export default function ListingDetail({ initialListing }) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  // Razorpay-only checkout (personal account).
-  const [razorpayEnabled, setRazorpayEnabled] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    api.get('/payments/config')
-      .then(({ data }) => { if (!cancelled) setRazorpayEnabled(Boolean(data.razorpayEnabled)); })
-      .catch(() => { if (!cancelled) setRazorpayEnabled(false); });
-    return () => { cancelled = true; };
-  }, []);
+  // Razorpay-only checkout (personal account). If the gateway keys are
+  // missing, /payments/order answers 503 and the error toast in book()
+  // explains it.
 
   useEffect(() => {
     if (user && safeId) {

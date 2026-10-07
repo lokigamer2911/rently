@@ -32,7 +32,7 @@ jest.mock('../src/utils/notifications', () => ({
 
 jest.mock('../src/middleware/auth', () => ({
   requireAuth: (req, _res, next) => {
-    const userId = req.headers['x-user-id'] || 'user-1';
+    const userId = req.headers['x-user-id'] || 'clxrenter00000000000001';
     req.user = { id: userId };
     next();
   },
@@ -52,50 +52,50 @@ describe('Booking state transitions', () => {
 
   it('should create a booking and transition to confirmed', async () => {
     prisma.listing.findUnique.mockResolvedValue({
-      id: 'listing-1',
+      id: 'clxlisting0000000000001',
       available: true,
-      ownerId: 'owner-1',
+      ownerId: 'clxowner000000000000001',
       pricePerDay: 100,
       deposit: 20,
       blockedDates: '[]',
       title: 'Test Listing',
     });
     prisma.booking.create.mockResolvedValue({
-      id: 'booking-1',
-      listingId: 'listing-1',
-      renterId: 'user-1',
+      id: 'clxbooking0000000000001',
+      listingId: 'clxlisting0000000000001',
+      renterId: 'clxrenter00000000000001',
       status: 'PENDING',
       totalAmount: 220,
       serviceFee: 20,
       listing: { title: 'Test Listing' },
     });
     prisma.booking.findUnique.mockResolvedValue({
-      id: 'booking-1',
-      listingId: 'listing-1',
-      renterId: 'user-1',
+      id: 'clxbooking0000000000001',
+      listingId: 'clxlisting0000000000001',
+      renterId: 'clxrenter00000000000001',
       status: 'PENDING',
-      listing: { ownerId: 'owner-1', title: 'Test Listing' },
+      listing: { ownerId: 'clxowner000000000000001', title: 'Test Listing' },
       totalAmount: 220,
       serviceFee: 20,
     });
-    prisma.booking.update.mockResolvedValue({ id: 'booking-1', status: 'CONFIRMED' });
+    prisma.booking.update.mockResolvedValue({ id: 'clxbooking0000000000001', status: 'CONFIRMED' });
 
     const createRes = await request(app)
       .post('/api/bookings')
-      .send({ listingId: 'listing-1', startDate: '2026-08-01', endDate: '2026-08-03' })
+      .send({ listingId: 'clxlisting0000000000001', startDate: '2026-08-01', endDate: '2026-08-03' })
       .expect(200);
 
-    expect(createRes.body.id).toBe('booking-1');
+    expect(createRes.body.id).toBe('clxbooking0000000000001');
 
     const confirmRes = await request(app)
-      .patch('/api/bookings/booking-1/status')
-      .set('x-user-id', 'owner-1')
+      .patch('/api/bookings/clxbooking0000000000001/status')
+      .set('x-user-id', 'clxowner000000000000001')
       .send({ status: 'CONFIRMED' })
       .expect(200);
 
     expect(confirmRes.body.status).toBe('CONFIRMED');
     expect(prisma.booking.update).toHaveBeenCalledWith({
-      where: { id: 'booking-1' },
+      where: { id: 'clxbooking0000000000001' },
       data: expect.objectContaining({ status: 'CONFIRMED' }),
     });
   });

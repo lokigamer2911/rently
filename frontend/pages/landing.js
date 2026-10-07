@@ -139,7 +139,7 @@ const LandingPage = () => {
    */
   const heroHighlights = [
     { icon: FiShield, title: 'Verified handover', desc: 'Photo and OTP sign-off at pickup and return.' },
-    { icon: FiCreditCard, title: 'Secure payments', desc: 'Pay by UPI QR today, cards rolling out shortly.' },
+    { icon: FiCreditCard, title: 'Secure payments', desc: 'Pay securely via Razorpay — cards, UPI and netbanking.' },
     { icon: FiClock, title: 'Rent flexibly', desc: 'By the hour, the day, or the month — your call.' },
   ];
 
