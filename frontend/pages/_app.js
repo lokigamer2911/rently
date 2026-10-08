@@ -7,6 +7,9 @@ import { ThemeProvider } from '../context/ThemeContext';
 import Head from 'next/head';
 import CookieConsent from '../components/CookieConsent';
 import AppErrorBoundary from '../components/AppErrorBoundary';
+import SmoothScroll from '../components/cinematic/SmoothScroll';
+import CustomCursor from '../components/cinematic/CustomCursor';
+import ScrollProgress from '../components/cinematic/ScrollProgress';
 import Script from 'next/script';
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -56,9 +59,13 @@ export default function App({ Component, pageProps }) {
       )}
 
       <CartProvider>
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
+        <SmoothScroll>
+          <ScrollProgress />
+          <CustomCursor />
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </SmoothScroll>
         <CookieConsent />
       </CartProvider>
     </AuthProvider>
