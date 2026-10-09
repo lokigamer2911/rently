@@ -59,8 +59,9 @@ export default function ListingCard({ l }) {
   };
 
   return (
+    <div className="cine-reveal h-full">
     <TiltCard max={6} className="h-full">
-    <div className="surface-card group flex h-full flex-col overflow-hidden p-0 !rounded-xl sm:!rounded-[2.2rem] cine-reveal">
+    <div className="surface-card group flex h-full flex-col overflow-hidden p-0 !rounded-xl sm:!rounded-[2.2rem]">
       <Link href={`/listings/${l.id}`} className="relative block overflow-hidden">
         {l.images?.[0] ? (
           <img
@@ -130,5 +131,6 @@ export default function ListingCard({ l }) {
       </div>
     </div>
     </TiltCard>
+    </div>
   );
 }

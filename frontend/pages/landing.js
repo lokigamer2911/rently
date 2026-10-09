@@ -325,7 +325,8 @@ const LandingPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {features.map((feature, idx) => (
-              <TiltCard key={idx} max={8} className="h-full cine-reveal" data-delay={(idx * 0.08).toFixed(2)}>
+              <div key={idx} className="cine-reveal h-full" data-delay={(idx * 0.08).toFixed(2)}>
+              <TiltCard max={8} className="h-full">
                 <div
                   onMouseEnter={() => setHoveredFeature(idx)}
                   onMouseLeave={() => setHoveredFeature(null)}
@@ -340,6 +341,7 @@ const LandingPage = () => {
                   <p className="text-slate-500 text-sm leading-relaxed">{feature.description}</p>
                 </div>
               </TiltCard>
+              </div>
             ))}
           </div>
         </div>

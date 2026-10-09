@@ -158,19 +158,19 @@ export default function Reveal({ children, delay = 0, variant = 'up', className 
 export function useCineReveals(deps = []) {
   useEffect(() => {
     const cleanup = initCineReveals();
-    const t1 = setTimeout(() => {
+    const refresh = () => {
       import('gsap/ScrollTrigger')
         .then(({ ScrollTrigger }) => ScrollTrigger.refresh())
         .catch(() => {});
-    }, 600);
-    const t2 = setTimeout(() => {
-      import('gsap/ScrollTrigger')
-        .then(({ ScrollTrigger }) => ScrollTrigger.refresh())
-        .catch(() => {});
-    }, 2300);
+    };
+    // 1) fonts/images 2) fallback after preloader window 3) event when preloader unlocks scroll
+    const t1 = setTimeout(refresh, 600);
+    const t2 = setTimeout(refresh, 2300);
+    window.addEventListener('rently:preloader-done', refresh);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
+      window.removeEventListener('rently:preloader-done', refresh);
       cleanup?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

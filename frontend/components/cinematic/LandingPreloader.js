@@ -29,6 +29,8 @@ export default function LandingPreloader() {
       document.body.style.overflow = '';
       sessionStorage.setItem('rently-preloader-seen', '1');
       try { window.__lenis?.start?.(); } catch {}
+      // Let scroll systems re-measure now that scroll is unlocked
+      window.dispatchEvent(new Event('rently:preloader-done'));
     }, 2100);
     return () => {
       clearTimeout(t1);
