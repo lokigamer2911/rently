@@ -7,6 +7,7 @@ const { z } = require('zod');
 const { createNotification, notifyWaitlist } = require('../utils/notifications');
 const { sendBookingRequestEmail } = require('../utils/email');
 const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
+const { overlapsBlocked } = require('../utils/blockedDates');
 const {
   buildSignatureEvidence,
   parseSignatureEvidence,
@@ -134,15 +135,12 @@ router.post('/', requireAuth, async (req, res, next) => {
     });
     if (overlap) return res.status(409).json({ error: 'Dates already booked' });
 
-    // Conflict check (Blocked Dates)
+    // Conflict check (Blocked Dates) — whole days and exact datetime ranges,
+    // half-open overlap just like booking-vs-booking above.
     const blockedDates = parseJsonArray(listing.blockedDates);
-    const hasBlockedOverlap = blockedDates.some(dateStr => {
-      const bDate = new Date(dateStr);
-      const sDate = new Date(start.toISOString().split('T')[0]);
-      const eDate = new Date(end.toISOString().split('T')[0]);
-      return bDate >= sDate && bDate <= eDate;
-    });
-    if (hasBlockedOverlap) return res.status(409).json({ error: 'Selected dates include blocked dates' });
+    if (overlapsBlocked(blockedDates, start, end)) {
+      return res.status(409).json({ error: 'Selected dates include blocked dates' });
+    }
 
     const days = Math.ceil((end - start) / 86400000);
     const rentalAmount = days * listing.pricePerDay;

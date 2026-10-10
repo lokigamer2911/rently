@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FiArrowLeft, FiPackage, FiPlus, FiTrash2, FiEdit } from 'react-icons/fi';
+import { FiArrowLeft, FiPackage, FiPlus, FiTrash2, FiEdit, FiCalendar, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { api } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import ListingCard from '../../components/ListingCard';
 import Button from '../../components/Button';
+import BlockedDatesEditor from '../../components/BlockedDatesEditor';
 
 export default function MyListings() {
   const { user } = useAuth();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [blockTarget, setBlockTarget] = useState(null);
+  const [blockDraft, setBlockDraft] = useState([]);
+  const [savingBlock, setSavingBlock] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -34,6 +38,26 @@ export default function MyListings() {
       toast.success('Listing deleted');
     } catch (err) {
       toast.error('Failed to delete listing');
+    }
+  };
+
+  const openBlockEditor = (listing) => {
+    setBlockTarget(listing);
+    setBlockDraft(Array.isArray(listing.blockedDates) ? listing.blockedDates : []);
+  };
+
+  const saveBlockDates = async () => {
+    if (!blockTarget) return;
+    try {
+      setSavingBlock(true);
+      const { data } = await api.patch(`/listings/${blockTarget.id}`, { blockedDates: blockDraft });
+      setListings(listings.map(l => (l.id === blockTarget.id ? { ...l, blockedDates: data.blockedDates || blockDraft } : l)));
+      toast.success('Blocked dates updated');
+      setBlockTarget(null);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to update blocked dates');
+    } finally {
+      setSavingBlock(false);
     }
   };
 
@@ -73,7 +97,14 @@ export default function MyListings() {
           {listings.map(l => (
             <div key={l.id} className="relative group">
               <ListingCard l={l} />
-              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+              <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-all">
+                <button
+                  onClick={() => openBlockEditor(l)}
+                  title="Edit blocked dates & times"
+                  className="!h-10 !w-10 flex items-center justify-center bg-white/90 text-amber-600 rounded-xl shadow-lg hover:bg-amber-50"
+                >
+                  <FiCalendar size={18} />
+                </button>
                 <Link 
                   href={`/listings/edit/${l.id}`}
                   className="!h-10 !w-10 flex items-center justify-center bg-white/90 text-brand-600 rounded-xl shadow-lg hover:bg-brand-50"
@@ -100,6 +131,32 @@ export default function MyListings() {
           <Button href="/listings/new" variant="primary" className="inline-flex mt-4">
             List your first item
           </Button>
+        </div>
+      )}
+
+      {blockTarget && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => !savingBlock && setBlockTarget(null)}>
+          <div className="surface-card w-full max-w-lg !p-5 sm:!p-6 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 mb-1">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Availability</p>
+                <h2 className="mt-1 text-xl font-bold text-slate-900">Block dates & times</h2>
+                <p className="text-sm text-slate-500 mt-1 line-clamp-1">{blockTarget.title}</p>
+              </div>
+              <button onClick={() => setBlockTarget(null)} aria-label="Close" className="h-9 w-9 shrink-0 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200">
+                <FiX size={16} />
+              </button>
+            </div>
+            <BlockedDatesEditor value={blockDraft} onChange={setBlockDraft} />
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setBlockTarget(null)} disabled={savingBlock} className="btn-secondary flex-1 !py-3">
+                Cancel
+              </button>
+              <button onClick={saveBlockDates} disabled={savingBlock} className="btn-primary flex-1 !py-3">
+                {savingBlock ? 'Saving...' : 'Save blocks'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { api } from '../../../lib/api';
 import MapView from '../../../components/MapView';
 import Button from '../../../components/Button';
+import BlockedDatesEditor from '../../../components/BlockedDatesEditor';
 
 const ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
@@ -33,7 +34,6 @@ export default function EditListing() {
     address: '', lat: null, lng: null, images: [], blockedDates: [], categoryId: '',
     depositNote: '',
   });
-  const [newBlockedDate, setNewBlockedDate] = useState('');
 
   useEffect(() => {
     if (!rawId) return;
@@ -267,48 +267,13 @@ export default function EditListing() {
           <section className="surface-card">
             <div className="mb-6">
               <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Availability</p>
-              <h2 className="mt-2 text-2xl text-slate-900">Blocked Dates</h2>
-              <p className="mt-1 text-sm text-slate-500">Prevent renters from booking on specific days.</p>
+              <h2 className="mt-2 text-2xl text-slate-900">Blocked Dates & Times</h2>
+              <p className="mt-1 text-sm text-slate-500">Prevent renters from booking whole days or specific hours.</p>
             </div>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <input 
-                  type="date" 
-                  className="input" 
-                  value={newBlockedDate}
-                  onChange={(e) => setNewBlockedDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-                <button 
-                  type="button" 
-                  className="bg-brand-50 text-brand-700 px-4 py-2 rounded-xl border border-brand-200 font-semibold hover:bg-brand-100 transition"
-                  onClick={() => {
-                    if (newBlockedDate && !form.blockedDates.includes(newBlockedDate)) {
-                      setForm(f => ({ ...f, blockedDates: [...f.blockedDates, newBlockedDate].sort() }));
-                      setNewBlockedDate('');
-                    }
-                  }}
-                >
-                  Block Date
-                </button>
-              </div>
-              {form.blockedDates.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {form.blockedDates.map(date => (
-                    <div key={date} className="flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1.5 rounded-lg border border-red-100 text-sm">
-                      <span>{new Date(date).toLocaleDateString()}</span>
-                      <button 
-                        type="button"
-                        className="hover:text-red-900 font-bold"
-                        onClick={() => setForm(f => ({ ...f, blockedDates: f.blockedDates.filter(d => d !== date) }))}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <BlockedDatesEditor
+              value={form.blockedDates}
+              onChange={(blockedDates) => setForm(f => ({ ...f, blockedDates }))}
+            />
           </section>
         </div>
 

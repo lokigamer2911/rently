@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiMapPin, FiSearch, FiSliders, FiTag, FiX, FiCheck, FiLoader } from 'react-icons/fi';
+import { FiMapPin, FiSearch, FiSliders, FiTag, FiX, FiCheck, FiLoader, FiUser } from 'react-icons/fi';
+import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher, api } from '../../lib/api';
 import ListingCard from '../../components/ListingCard';
@@ -136,6 +137,10 @@ export default function Listings() {
           <p className="mt-3 sm:mt-6 text-sm sm:text-lg text-slate-500 leading-relaxed">
             Search rental items from verified local owners.
           </p>
+          <Link href="/hosts" className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700 hover:underline">
+            <FiUser size={15} />
+            Looking for a specific vendor? Search hosts
+          </Link>
         </div>
 
         <div className="max-w-4xl mx-auto surface-card !p-2 sm:!p-3 flex flex-col sm:flex-row gap-2 shadow-2xl mobile-nav-spacer">

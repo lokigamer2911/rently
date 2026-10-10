@@ -56,6 +56,7 @@ export default function Navbar() {
 
   const links = [
     { href: '/listings', label: 'Discover', show: true },
+    { href: '/hosts', label: 'Hosts', show: true },
     { href: '/listings/new', label: 'Host an Item', show: !!user },
     { href: '/chat', label: 'Messages', show: !!user },
     { href: '/admin', label: 'Admin', show: user?.role === 'ADMIN' },
