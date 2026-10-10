@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { FiCompass, FiMessageCircle, FiPackage, FiShoppingCart, FiZap, FiMenu, FiUser, FiClock, FiLogOut, FiBell, FiActivity, FiTrendingUp, FiHeart, FiSun, FiMoon, FiX } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../context/CartContext';
@@ -15,7 +15,8 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
+  const rafId = useRef(0);
   const { theme, toggleTheme } = useTheme();
 
   const { data: notifications } = useSWR(user ? '/notifications' : null, fetcher, { refreshInterval: 5000 });
@@ -26,20 +27,27 @@ export default function Navbar() {
   const { data: threads } = useSWR(user ? '/chat/threads' : null, fetcher, { refreshInterval: 20000 });
   const unreadChats = threads?.reduce((sum, t) => sum + (t._count?.messages || 0), 0) || 0;
 
+  // Direction-aware nav: hide on scroll down past 100px, reveal instantly on scroll up.
+  // rAF-throttled + ref-based (no re-subscribe per scroll event).
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false);
-      } else {
-        setIsVisible(true);
-      }
-      setLastScrollY(currentScrollY);
+    const onScroll = () => {
+      if (rafId.current) return;
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = 0;
+        const y = window.scrollY;
+        const goingDown = y > lastScrollY.current;
+        if (goingDown && y > 100) setIsVisible(false);
+        else setIsVisible(true);
+        lastScrollY.current = y;
+      });
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
 
   // Close menu on route change
   useEffect(() => {

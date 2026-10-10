@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 import toast from 'react-hot-toast';
 import { FiFileText, FiStar, FiClock, FiDownload, FiInfo, FiMapPin, FiCamera, FiX, FiActivity, FiCreditCard } from 'react-icons/fi';
@@ -40,16 +40,8 @@ export default function Bookings() {
   const { user } = useAuth();
   const { data: list, mutate } = useSWR(tab === 'mine' ? '/bookings/mine' : '/bookings/incoming', fetcher);
 
-  // Razorpay-only checkout (personal account).
-  const [razorpayEnabled, setRazorpayEnabled] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    api.get('/payments/config')
-      .then(({ data }) => { if (!cancelled) setRazorpayEnabled(Boolean(data.razorpayEnabled)); })
-      .catch(() => { if (!cancelled) setRazorpayEnabled(false); });
-    return () => { cancelled = true; };
-  }, []);
+  // Razorpay-only checkout (personal account). If the gateway keys are
+  // missing, /payments/order answers 503 and the error toast below explains it.
 
   const payNowWithRazorpay = async (booking) => {
     try {
@@ -164,17 +156,13 @@ export default function Bookings() {
                   <p className="text-xs font-bold text-brand-700 mt-2 bg-brand-50 px-2 py-0.5 rounded-full w-fit">
                     Rs {(b.totalAmount / 100).toLocaleString()}
                   </p>
-                  {tab === 'mine' && b.status === 'PENDING' && b.payment && (
+                  {tab === 'mine' && b.status === 'PENDING' && b.payment && b.payment.status !== 'PAID' && (
                     <p className={`text-[10px] font-bold mt-1.5 ${
-                      b.payment.status === 'AWAITING_VERIFICATION' ? 'text-amber-600'
-                        : b.payment.status === 'REJECTED' ? 'text-red-600'
-                          : 'text-slate-400'
+                      b.payment.status === 'FAILED' ? 'text-red-600' : 'text-slate-400'
                     }`}>
-                      {b.payment.status === 'AWAITING_VERIFICATION'
-                        ? 'Payment submitted — verifying'
-                        : b.payment.status === 'REJECTED'
-                          ? 'Payment not matched — please retry'
-                          : 'Payment pending'}
+                      {b.payment.status === 'FAILED'
+                        ? 'Payment failed — please retry'
+                        : 'Payment pending'}
                     </p>
                   )}
                 </div>

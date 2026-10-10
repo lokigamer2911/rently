@@ -50,13 +50,13 @@ const SIZES = {
   lg: { box: 'h-14 w-14', glyph: 26, sat: 8, z: 16 },
 };
 
-export default function AnimatedIcon({ icon: Icon, tone = 'blue', size = 'md', delay = '0s' }) {
+export default function AnimatedIcon({ icon: Icon, tone = 'blue', size = 'md', delay = '0s', className = '', style }) {
   const t = TONES[tone] || TONES.blue;
   const s = SIZES[size] || SIZES.md;
 
   return (
     <span
-      className={`lumi-icon ${s.box}`}
+      className={`lumi-icon ${s.box} ${className}`}
       style={{
         '--lumi-tint-top': t.tintTop,
         '--lumi-tint-bottom': t.tintBottom,
@@ -65,6 +65,7 @@ export default function AnimatedIcon({ icon: Icon, tone = 'blue', size = 'md', d
         '--lumi-glow': t.glow,
         '--lumi-sat': `${s.sat}px`,
         '--lumi-glyph-z': `${s.z}px`,
+        ...style,
       }}
       aria-hidden="true"
     >

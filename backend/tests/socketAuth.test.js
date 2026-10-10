@@ -11,6 +11,10 @@ jest.mock('../src/config/prisma', () => ({
   },
 }));
 
+const jwt = require('jsonwebtoken');
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_for_sockets';
+
 const prisma = require('../src/config/prisma');
 const { registerSocket } = require('../src/sockets');
 
@@ -24,25 +28,18 @@ describe('socket message authorization', () => {
     const socketHandlers = {};
 
     const io = {
-      use: jest.fn((middleware) => {
-        // Simulate successful middleware (user is authenticated)
-        const fakeSocket = { user: { id: 'user_c', name: 'Intruder', tokenVersion: 0 } };
-        middleware(fakeSocket, (err) => {
-          if (!err) {
-            // Store the authenticated socket
-            io._authenticatedSocket = fakeSocket;
-          }
-        });
-      }),
+      // Capture the auth middleware so the test can await it like a real handshake.
+      use: jest.fn((middleware) => { io._middleware = middleware; }),
       on: jest.fn((event, handler) => {
         connectionHandlers[event] = handler;
       }),
       to: jest.fn(() => ({ emit: jest.fn() })),
+      _middleware: null,
       _authenticatedSocket: null,
     };
 
     const socket = {
-      handshake: { auth: { token: 'valid-token' } },
+      handshake: { headers: {}, auth: {} },
       user: null,
       join: jest.fn(),
       on: jest.fn((event, handler) => {
@@ -51,6 +48,16 @@ describe('socket message authorization', () => {
     };
 
     registerSocket(io);
+
+    // Intruder authenticates with a valid token but is not in the thread.
+    const intruderToken = jwt.sign(
+      { id: 'user_c', tokenVersion: 0 },
+      process.env.JWT_SECRET,
+    );
+    socket.handshake.auth.token = intruderToken;
+    await io._middleware(socket, (err) => {
+      if (!err) io._authenticatedSocket = socket;
+    });
 
     // Simulate connection with the authenticated socket
     const authSocket = io._authenticatedSocket || socket;

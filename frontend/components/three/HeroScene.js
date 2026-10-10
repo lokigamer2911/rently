@@ -73,39 +73,50 @@ function FloatingProductCard({ position, emoji, title, category, price, delay = 
 }
 
 // Group that gently follows the pointer for a parallax/3D feel.
-// PERF FIX: scrollY stored in a ref (not state) to avoid re-renders on every scroll event.
+// Scroll-linked cinema: scrollY drives group rotation + camera dolly (premium scroll cinema).
 function ParallaxRig({ children, reduced }) {
   const group = useRef();
-  const { pointer } = useThree();
+  const { pointer, camera } = useThree();
   // Use a ref so scroll events don't trigger React re-renders
   const scrollYRef = useRef(0);
+  const progressRef = useRef(0);
 
   useEffect(() => {
     if (reduced) return;
     const handleScroll = () => {
       scrollYRef.current = window.scrollY;
+      const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      progressRef.current = Math.min(1, window.scrollY / max);
     };
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [reduced]);
 
   useFrame((state, delta) => {
     if (!group.current || reduced) return;
-    
+
     // Mouse parallax target
     const targetY = pointer.x * 0.45;
     const targetX = -pointer.y * 0.3;
-    
-    // Scroll rotation/translation target (read from ref, not state)
+
+    // Scroll cinema: first viewport (0..0.25 progress) drives hero dolly
+    const heroProgress = Math.min(1, progressRef.current / 0.25);
     const scrollFactor = scrollYRef.current * 0.0006;
-    
-    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, targetY + scrollFactor * 0.5, 2.5, delta);
-    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, targetX, 2.5, delta);
-    
-    // Scroll translation
-    const targetZ = -scrollFactor * 2;
+
+    group.current.rotation.y = THREE.MathUtils.damp(group.current.rotation.y, targetY + scrollFactor * 0.5 + heroProgress * 0.6, 2.5, delta);
+    group.current.rotation.x = THREE.MathUtils.damp(group.current.rotation.x, targetX - heroProgress * 0.25, 2.5, delta);
+
+    // Scroll translation + scale-down as user leaves hero
+    const targetZ = -scrollFactor * 2 - heroProgress * 1.2;
     group.current.position.z = THREE.MathUtils.damp(group.current.position.z, targetZ, 2.5, delta);
-    group.current.position.y = THREE.MathUtils.damp(group.current.position.y, -scrollFactor * 0.8, 2.5, delta);
+    group.current.position.y = THREE.MathUtils.damp(group.current.position.y, -scrollFactor * 0.8 - heroProgress * 0.6, 2.5, delta);
+    const s = 1 - heroProgress * 0.12;
+    group.current.scale.setScalar(THREE.MathUtils.damp(group.current.scale.x, s, 2.5, delta));
+
+    // Camera dolly: push in slightly then pull back — CGI reveal feel
+    const camZ = 6.2 - heroProgress * 0.9;
+    camera.position.z = THREE.MathUtils.damp(camera.position.z, camZ, 2.5, delta);
   });
 
   return <group ref={group}>{children}</group>;
