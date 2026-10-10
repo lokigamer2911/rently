@@ -17,10 +17,16 @@ import {
   FiCreditCard,
   FiUserCheck,
 } from 'react-icons/fi';
+import useSWR from 'swr';
+import { fetcher } from '../lib/api';
 import Button from '../components/Button';
 import TiltCard from '../components/TiltCard';
 import AnimatedIcon from '../components/AnimatedIcon';
 import WebGLErrorBoundary from '../components/WebGLErrorBoundary';
+import LandingPreloader from '../components/cinematic/LandingPreloader';
+import ShaderBackground from '../components/cinematic/ShaderBackground';
+import HorizontalGallery from '../components/cinematic/HorizontalGallery';
+import { useCineReveals } from '../components/cinematic/Reveal';
 
 // Dynamically load client-side WebGL elements to prevent hydration issues
 const Hero3D = dynamic(() => import('../components/three/Hero3D'), {
@@ -46,16 +52,50 @@ const Earnings3DChart = dynamic(() => import('../components/three/Earnings3DChar
 const LandingPage = () => {
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [activeStep, setActiveStep] = useState(0);
+  // Hover-driven preview step for right‑hand 3D showcase
+  // null = nothing hovered → scroll-driven activeStep
+  const [hoveredStep, setHoveredStep] = useState(null);
   const stepRefs = useRef([]);
+  const howItWorksWrap = useRef(null);
 
-  // IntersectionObserver to update active step on scroll
+  useCineReveals();
+
+  // Featured items for landing-only horizontal CGI shelf
+  const { data: featured } = useSWR('/listings?limit=8', fetcher, { revalidateOnFocus: false });
+
+  // Scroll-progress driven active step (premium scroll cinema) + IO fallback
+  useEffect(() => {
+    const onScroll = () => {
+      if (!howItWorksWrap.current) return;
+      const rect = howItWorksWrap.current.getBoundingClientRect();
+      const vh = window.innerHeight;
+      // progress of section through viewport
+      const total = rect.height - vh * 0.4;
+      const passed = Math.min(Math.max(-rect.top + vh * 0.2, 0), Math.max(1, total));
+      const p = total > 0 ? passed / total : 0;
+      const idx = Math.min(3, Math.max(0, Math.floor(p * 4)));
+      setActiveStep((prev) => (prev === idx ? prev : idx));
+    };
+    let raf = 0;
+    const loop = () => {
+      raf = 0;
+      onScroll();
+    };
+    const handler = () => {
+      if (!raf) raf = requestAnimationFrame(loop);
+    };
+    window.addEventListener('scroll', handler, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const idx = Number(entry.target.dataset.idx);
-            setActiveStep(idx);
+            if (!Number.isNaN(idx) && hoveredStep === null) setActiveStep(idx);
           }
         });
       },
@@ -67,12 +107,12 @@ const LandingPage = () => {
     });
 
     return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Hover-driven preview step for right‑hand 3D showcase
-  // null = nothing hovered → default to step 0
-  const [hoveredStep, setHoveredStep] = useState(null);
-  const previewStep = hoveredStep !== null ? hoveredStep : 0;
+  // null = nothing hovered → scroll-driven activeStep
+  const previewStep = hoveredStep !== null ? hoveredStep : activeStep;
 
   const features = [
     {
@@ -100,26 +140,26 @@ const LandingPage = () => {
   const howItWorks = [
     {
       step: '01',
-      title: 'Browse & Search',
-      description: 'Explore items near you. Filter by category, price, location, and ratings.',
+      title: 'Browse and search',
+      description: 'Explore items near you. Filter by category, price, location and ratings.',
       icon: FiSearch,
     },
     {
       step: '02',
-      title: 'Book & Pay',
-      description: 'Select dates, add to cart, and pay securely. Your booking confirms as soon as the payment is verified.',
+      title: 'Book and pay',
+      description: 'Pick your dates and pay securely. The booking confirms once payment is verified.',
       icon: FiCheckCircle,
     },
     {
       step: '03',
-      title: 'Connect & Pickup',
-      description: 'Chat with host, arrange pickup, and collect your item. Verify condition with photos.',
+      title: 'Meet and pick up',
+      description: 'Chat with the host, arrange pickup and verify condition with photos.',
       icon: FiUsers,
     },
     {
       step: '04',
-      title: 'Return & Earn',
-      description: 'Return item in agreed condition. Get refund and help host earn. Leave a review.',
+      title: 'Return and review',
+      description: 'Return on time, get your deposit back and leave a review.',
       icon: FiTrendingUp,
     },
   ];
@@ -143,54 +183,68 @@ const LandingPage = () => {
     { icon: FiClock, title: 'Rent flexibly', desc: 'By the hour, the day, or the month — your call.' },
   ];
 
-  /** Real, shipped safety features — replaces the old fabricated testimonials. */
+  /** Real, shipped safety features. */
   const trustFeatures = [
     {
       icon: FiUserCheck,
-      title: 'Handover OTPs',
-      desc: 'A one-time code is exchanged at pickup and at return, so both sides know the item changed hands.',
+      title: 'Handover codes',
+      desc: 'A one-time code is exchanged at pickup and return, so both sides have proof of handover.',
     },
     {
       icon: FiCamera,
-      title: 'Condition evidence',
-      desc: 'Photos and signatures captured at handover are stored on the booking and visible to both parties.',
+      title: 'Condition reports',
+      desc: 'Photos and signatures from handover stay on the booking for both parties.',
     },
     {
       icon: FiFileText,
       title: 'Rental agreement',
-      desc: 'Every confirmed booking comes with a downloadable agreement PDF covering dates, amounts, and terms.',
+      desc: 'Every confirmed booking includes a downloadable agreement with dates and amounts.',
     },
     {
       icon: FiLock,
       title: 'Deposit options',
-      desc: 'Hosts take a cash deposit or an agreed collateral, recorded on the booking before pickup.',
+      desc: 'Cash deposit or agreed collateral, recorded on the booking before pickup.',
     },
   ];
 
+  const galleryItems = (featured?.length ? featured : [
+    { id: '', title: 'Sony FX3 Cinema Rig', pricePerDay: 350000, city: 'Mumbai', tag: 'Camera', emoji: '📷' },
+    { id: '', title: 'DJI Mavic 3 Pro', pricePerDay: 220000, city: 'Delhi', tag: 'Drone', emoji: '🚁' },
+    { id: '', title: 'Apple Vision Pro', pricePerDay: 500000, city: 'Bengaluru', tag: 'Spatial', emoji: '🥽' },
+    { id: '', title: 'PS5 + 4K TV Bundle', pricePerDay: 120000, city: 'Pune', tag: 'Gaming', emoji: '🎮' },
+    { id: '', title: 'Bosch Drill Set', pricePerDay: 45000, city: 'Jaipur', tag: 'Tools', emoji: '🛠️' },
+  ]).slice(0, 8);
+
   return (
-    <div className="space-y-10 sm:space-y-16 mobile-nav-spacer">
+    <div className="space-y-10 sm:space-y-16 mobile-nav-spacer landing-cinema">
+      <LandingPreloader />
+
       {/* Hero Section */}
       <section className="relative min-h-[70vh] sm:min-h-[85vh] flex items-center justify-center overflow-hidden py-6 sm:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <ShaderBackground className="hero-shader" />
+        <div data-parallax="0.12" className="hero-orb hero-orb-a" aria-hidden="true" />
+        <div data-parallax="-0.1" className="hero-orb hero-orb-b" aria-hidden="true" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
           <div className="grid lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left Content */}
             <div className="lg:col-span-5 space-y-5 sm:space-y-8 text-left">
               <div>
-                <span className="eyebrow mb-3 sm:mb-4">
-                  🚀 Welcome to Rently
+                <span className="eyebrow mb-3 sm:mb-4 cine-reveal">
+                  Peer-to-peer rentals
                 </span>
                 <h1 className="text-[2rem] sm:text-4xl md:text-5xl lg:text-6xl font-black text-slate-800 leading-[1.1] mb-4 sm:mb-6 tracking-tight">
-                  Rent Smarter,<br />
-                  <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
+                  <span className="cine-mask"><span className="cine-mask-line">Rent Smarter,</span></span>
+                  <br />
+                  <span className="cine-mask"><span className="cine-mask-line bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 bg-clip-text text-transparent">
                     Live Better
-                  </span>
+                  </span></span>
                 </h1>
-                <p className="text-sm sm:text-base md:text-lg text-slate-500 leading-relaxed max-w-lg">
-                  Access premium gear at a fraction of retail prices. Peer-to-peer rentals secured by trust.
+                <p className="text-sm sm:text-base md:text-lg text-slate-500 leading-relaxed max-w-lg cine-reveal" data-delay="0.15">
+                  Rent cameras, drones, consoles and tools from verified neighbours. Secure payments and documented handovers.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 cine-reveal" data-delay="0.2" data-cursor-label="Go">
                 <Button href="/listings" variant="primary" className="!px-6 sm:!px-8 !py-3.5 sm:!py-4 text-sm sm:text-base group shadow-lg shadow-slate-900/10">
                   <FiSearch size={18} />
                   Start Browsing
@@ -213,8 +267,8 @@ const LandingPage = () => {
                   return (
                     <div
                       key={item.title}
-                      className="reveal flex items-start gap-3 rounded-2xl bg-white/60 border border-slate-200/60 px-3.5 py-3 backdrop-blur-sm hover:border-blue-500/25 hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-0.5 transition-all duration-300"
-                      style={{ animationDelay: `${(idx * 0.16 + 0.15).toFixed(2)}s`, animationFillMode: 'both' }}
+                      className="cine-reveal flex items-start gap-3 rounded-2xl bg-white/60 border border-slate-200/60 px-3.5 py-3 backdrop-blur-sm hover:border-blue-500/25 hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-0.5 transition-all duration-300"
+                      data-delay={(idx * 0.12 + 0.25).toFixed(2)}
                     >
                       <AnimatedIcon icon={item.icon} tone="blue" size="sm" delay={`${(idx * -0.9).toFixed(1)}s`} />
                       <div className="min-w-0">
@@ -228,7 +282,7 @@ const LandingPage = () => {
             </div>
 
             {/* Right 3D Stage — hidden on very small screens, shown on sm+ */}
-            <div className="hidden sm:block lg:col-span-7 relative h-[40vh] lg:h-[75vh] w-full">
+            <div className="hidden sm:block lg:col-span-7 relative h-[40vh] lg:h-[75vh] w-full cine-reveal" data-delay="0.1">
               <WebGLErrorBoundary>
                 <Hero3D className="w-full h-full" />
               </WebGLErrorBoundary>
@@ -245,22 +299,34 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* Landing-only marquee */}
+      <div className="landing-marquee" aria-hidden="true">
+        <div className="landing-marquee-track">
+          {Array.from({ length: 2 }).map((_, k) => (
+            <span key={k}>
+              Verified handovers&nbsp;&nbsp;•&nbsp;&nbsp;Secure payments&nbsp;&nbsp;•&nbsp;&nbsp;Local hosts&nbsp;&nbsp;•&nbsp;&nbsp;Flexible rentals&nbsp;&nbsp;•&nbsp;&nbsp;Condition reports&nbsp;&nbsp;•&nbsp;&nbsp;
+            </span>
+          ))}
+        </div>
+      </div>
+
       {/* Features Grid */}
       <section className="py-10 sm:py-16 md:py-24 relative px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-16">
-            <span className="eyebrow mb-3 sm:mb-4">Why Choose Rently</span>
+          <div className="text-center mb-8 sm:mb-16 cine-reveal">
+            <span className="eyebrow mb-3 sm:mb-4">Why Rently</span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 mb-4 sm:mb-6 tracking-tight">
-              Designed for Your Lifestyle
+              Everything you need, right nearby
             </h2>
             <p className="text-sm sm:text-lg text-slate-500 max-w-2xl mx-auto">
-              Community-driven, technology-enabled, and completely transparent.
+              Real items from verified hosts, with clear pricing and secure checkout.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {features.map((feature, idx) => (
-              <TiltCard key={idx} max={8} className="h-full">
+              <div key={idx} className="cine-reveal h-full" data-delay={(idx * 0.08).toFixed(2)}>
+              <TiltCard max={8} className="h-full">
                 <div
                   onMouseEnter={() => setHoveredFeature(idx)}
                   onMouseLeave={() => setHoveredFeature(null)}
@@ -275,25 +341,27 @@ const LandingPage = () => {
                   <p className="text-slate-500 text-sm leading-relaxed">{feature.description}</p>
                 </div>
               </TiltCard>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-10 sm:py-16 md:py-24 relative px-4 sm:px-6 lg:px-8">
+      {/* How It Works — sticky CGI showcase */}
+      <section ref={howItWorksWrap} className="py-10 sm:py-16 md:py-24 relative px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-16">
-            <span className="eyebrow mb-3 sm:mb-4">Simple Process</span>
+          <div className="text-center mb-8 sm:mb-16 cine-reveal">
+            <span className="eyebrow mb-3 sm:mb-4">How it works</span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 mb-4 sm:mb-6 tracking-tight">
-              4 Steps to Get Started
+              Rent in four steps
             </h2>
             <p className="text-sm sm:text-lg text-slate-500 max-w-2xl mx-auto">
-              From browsing to booking in minutes.
+              Browse, book, pick up and return — all tracked in one place.
             </p>
+            <div className="how-progress"><i style={{ transform: `scaleX(${(previewStep + 1) / 4})` }} /></div>
           </div>
 
-          <div className="grid lg:grid-cols-12 gap-6 sm:gap-12 items-center">
+          <div className="grid lg:grid-cols-12 gap-6 sm:gap-12 items-start">
             <div className="lg:col-span-6 space-y-3 sm:space-y-4">
               {howItWorks.map((item, idx) => {
                 const isActive = previewStep === idx;
@@ -305,10 +373,11 @@ const LandingPage = () => {
                     onMouseEnter={() => setHoveredStep(idx)}
                     onMouseLeave={() => setHoveredStep(null)}
                     onClick={() => setHoveredStep(idx)}
-                    className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all duration-300 cursor-pointer flex gap-3 sm:gap-4 items-start ${isActive
+                    className={`cine-reveal p-4 sm:p-6 rounded-xl sm:rounded-2xl border transition-all duration-300 cursor-pointer flex gap-3 sm:gap-4 items-start ${isActive
                       ? 'bg-white border-blue-500/30 shadow-[0_15px_30px_-15px_rgba(37,99,235,0.08)] sm:scale-105'
                       : 'bg-white/40 border-slate-200/50 hover:bg-white/60 hover:border-slate-300 sm:hover:scale-105'
                       }`}
+                    data-delay={(idx * 0.05).toFixed(2)}
                   >
                     <div
                       className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-xs sm:text-sm transition-all ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-100/80 text-slate-500'}`}
@@ -328,58 +397,70 @@ const LandingPage = () => {
               })}
             </div>
 
-            {/* 3D Showcase — hidden on mobile, shown on lg+ */}
+            {/* 3D Showcase — sticky on desktop */}
             <div className="hidden lg:block lg:col-span-6">
-              <WebGLErrorBoundary fallback={<div className="w-full h-80 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/50"><p className="text-sm text-slate-400">Interactive demo unavailable</p></div>}>
-                <Process3DShowcase activeStep={previewStep} />
-              </WebGLErrorBoundary>
+              <div className="lg:sticky lg:top-24">
+                <WebGLErrorBoundary fallback={<div className="w-full h-80 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/50"><p className="text-sm text-slate-400">Interactive demo unavailable</p></div>}>
+                  <Process3DShowcase activeStep={previewStep} />
+                </WebGLErrorBoundary>
+                <div className="flex gap-2 mt-4 justify-center">
+                  {howItWorks.map((s, i) => (
+                    <button key={s.step} type="button" onClick={() => { setHoveredStep(i); setActiveStep(i); }} className={`how-dot ${previewStep === i ? 'is-active' : ''}`} aria-label={s.title} />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Landing-only horizontal CGI shelf */}
+      <HorizontalGallery items={galleryItems} />
 
       {/* Host Benefits */}
       <section className="py-10 sm:py-16 md:py-24 relative px-4 sm:px-6 lg:px-8 border-t border-b border-slate-200/30 bg-slate-50/20">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-12 gap-8 sm:gap-12 items-center">
             <div className="lg:col-span-6 space-y-5 sm:space-y-8">
-              <div>
+              <div className="cine-reveal">
                 <span className="eyebrow !bg-emerald-50 !text-emerald-700 !border-emerald-200/60 mb-3 sm:mb-4">
-                  For Hosts
+                  For hosts
                 </span>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 mb-4 sm:mb-6 tracking-tight">
-                  Turn Your Gear Into Income
+                  Earn from what you own
                 </h2>
                 <p className="text-sm sm:text-lg text-slate-500 leading-relaxed mb-4 sm:mb-6">
-                  Your items are sitting idle. Why not earn from them? Build passive income while helping your community.
+                  List cameras, tools, consoles and more. You set the price and approve every booking.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {hostBenefits.map((benefit, idx) => {
                   return (
-                    <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow transition-shadow">
+                    <div key={idx} className="cine-reveal flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow transition-shadow" data-delay={(idx * 0.05).toFixed(2)}>
                       <AnimatedIcon icon={benefit.icon} tone="emerald" size="sm" delay={`${(idx * -0.8).toFixed(1)}s`} />
-                      <p className="text-slate-700 text-xs sm:text-sm font-semibold truncate">{benefit.text}</p>
+                      <p className="text-slate-700 text-xs sm:text-sm font-semibold leading-snug">{benefit.text}</p>
                     </div>
                   );
                 })}
               </div>
 
-              <Button
-                href="/listings/new"
-                requireAuth
-                authMessage="Please sign in first to list your first item."
-                variant="primary"
-                className="!px-6 sm:!px-8 !py-3.5 sm:!py-4 text-sm sm:text-base !bg-emerald-600 hover:!bg-emerald-700 shadow-emerald-600/10"
-              >
-                List Your First Item
-                <FiArrowRight size={18} />
-              </Button>
+              <div className="cine-reveal">
+                <Button
+                  href="/listings/new"
+                  requireAuth
+                  authMessage="Please sign in first to list your first item."
+                  variant="primary"
+                  className="!px-6 sm:!px-8 !py-3.5 sm:!py-4 text-sm sm:text-base !bg-emerald-600 hover:!bg-emerald-700 shadow-emerald-600/10"
+                >
+                  List Your First Item
+                  <FiArrowRight size={18} />
+                </Button>
+              </div>
             </div>
 
             {/* 3D Chart — hidden on mobile, shown on lg+ */}
-            <div className="hidden lg:block lg:col-span-6 w-full">
+            <div className="hidden lg:block lg:col-span-6 w-full cine-reveal">
               <WebGLErrorBoundary fallback={<div className="w-full h-96 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center border border-slate-200/50"><p className="text-sm text-slate-400">Hosting flow unavailable</p></div>}>
                 <Earnings3DChart />
               </WebGLErrorBoundary>
@@ -391,15 +472,15 @@ const LandingPage = () => {
       {/* Trust / Safety — describes the checks that are actually built in */}
       <section className="py-10 sm:py-16 md:py-24 relative px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8 sm:mb-16">
+          <div className="text-center mb-8 sm:mb-16 cine-reveal">
             <span className="eyebrow !bg-purple-50 !text-purple-700 !border-purple-200/60 mb-3 sm:mb-4">
-              Built for Trust
+              Safety built in
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 mb-4 sm:mb-6 tracking-tight">
-              Every Rental, Documented
+              Protected on both sides
             </h2>
             <p className="text-sm sm:text-lg text-slate-500 max-w-2xl mx-auto">
-              Handovers are verified on both ends, so a rental rarely turns into a he-said-she-said.
+              OTP handovers, photo evidence and a written agreement on every booking.
             </p>
           </div>
 
@@ -408,8 +489,8 @@ const LandingPage = () => {
               return (
                 <div
                   key={item.title}
-                  className="reveal p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/70 border border-slate-200/50 hover:border-purple-500/25 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col backdrop-blur-md"
-                  style={{ animationDelay: `${(idx * 0.12).toFixed(2)}s`, animationFillMode: 'both' }}
+                  className="cine-reveal p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white/70 border border-slate-200/50 hover:border-purple-500/25 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 transition-all duration-300 h-full flex flex-col backdrop-blur-md"
+                  data-delay={(idx * 0.08).toFixed(2)}
                 >
                   <div className="mb-4 sm:mb-5">
                     <AnimatedIcon icon={item.icon} tone="purple" size="md" delay={`${(idx * -0.7).toFixed(1)}s`} />
@@ -426,18 +507,18 @@ const LandingPage = () => {
       {/* Floating CTA Banner */}
       <section className="py-8 sm:py-12 md:py-20 relative px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 p-8 sm:p-12 md:p-20 shadow-2xl shadow-blue-500/10">
+          <div className="cine-reveal relative overflow-hidden rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 p-8 sm:p-12 md:p-20 shadow-2xl shadow-blue-500/10 group">
             <div className="absolute inset-0 opacity-15">
-              <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl" />
+              <div data-parallax="0.2" className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl" />
+              <div data-parallax="-0.15" className="absolute bottom-0 left-0 w-96 h-96 bg-white rounded-full mix-blend-overlay filter blur-3xl" />
             </div>
 
             <div className="max-w-3xl mx-auto text-center relative z-10 space-y-4 sm:space-y-6">
               <h2 className="text-xl sm:text-3xl md:text-5xl font-black text-white leading-tight tracking-tight">
-                Ready to Transform Your Rental Experience?
+                Ready to start renting?
               </h2>
               <p className="text-sm sm:text-base md:text-lg text-white/95 max-w-xl mx-auto leading-relaxed">
-                Start today and save money or earn income.
+                Join in a minute — browse items or list your first one.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center pt-4 sm:pt-6">
@@ -454,6 +535,9 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Landing-only WebGL page-transition veil */}
+      <div className="landing-veil" aria-hidden="true" />
     </div>
   );
 };

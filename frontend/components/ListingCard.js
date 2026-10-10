@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import TiltCard from './TiltCard';
 
 export default function ListingCard({ l }) {
   const { addToCart } = useCart();
@@ -58,6 +59,8 @@ export default function ListingCard({ l }) {
   };
 
   return (
+    <div className="cine-reveal h-full">
+    <TiltCard max={6} className="h-full">
     <div className="surface-card group flex h-full flex-col overflow-hidden p-0 !rounded-xl sm:!rounded-[2.2rem]">
       <Link href={`/listings/${l.id}`} className="relative block overflow-hidden">
         {l.images?.[0] ? (
@@ -119,13 +122,15 @@ export default function ListingCard({ l }) {
           {user && (user.id === l.ownerId || user.id === l.owner?.id) ? (
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Your Listing</span>
           ) : (
-            <button onClick={handleAddToCart} className="btn-secondary !px-4 !py-2.5" type="button">
+            <button onClick={handleAddToCart} className="btn-secondary btn-magnetic !px-4 !py-2.5" type="button">
               <FiShoppingCart size={16} />
               Add
             </button>
           )}
         </div>
       </div>
+    </div>
+    </TiltCard>
     </div>
   );
 }
