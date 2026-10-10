@@ -30,14 +30,31 @@ export default function Button({
   type = 'button',
   requireAuth = false,
   authMessage = 'Please sign in first to use this feature.',
+  magnetic = true,
   ...rest
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const baseClass = `btn btn-${variant} btn-${size}`;
+  const baseClass = `btn btn-${variant} btn-${size} btn-magnetic`;
   const disabledClass = disabled ? 'btn-disabled' : '';
   const finalClass = `${baseClass} ${disabledClass} ${className}`.trim();
   const loginHref = `/auth/login?redirect=${encodeURIComponent(router.asPath)}&message=${encodeURIComponent(authMessage)}`;
+  const magnetProps = magnetic
+    ? {
+        onMouseMove: (e) => {
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+          if (window.matchMedia('(hover: none)').matches) return;
+          const el = e.currentTarget;
+          const r = el.getBoundingClientRect();
+          const x = e.clientX - (r.left + r.width / 2);
+          const y = e.clientY - (r.top + r.height / 2);
+          el.style.transform = `translate(${x * 0.12}px, ${y * 0.12}px)`;
+        },
+        onMouseLeave: (e) => {
+          e.currentTarget.style.transform = '';
+        },
+      }
+    : {};
 
   const handleAuthGate = (event) => {
     if (!requireAuth || user) return false;
@@ -55,6 +72,7 @@ export default function Button({
           className={finalClass}
           aria-disabled={disabled || (requireAuth && !user)}
           onClick={handleAuthGate}
+          {...magnetProps}
           {...rest}
         >
           {children}
@@ -73,6 +91,7 @@ export default function Button({
       }}
       disabled={disabled}
       aria-disabled={disabled || (requireAuth && !user)}
+      {...magnetProps}
       {...rest}
     >
       {children}

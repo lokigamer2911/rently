@@ -22,6 +22,11 @@ import {
 import { api, fetcher } from '../../lib/api';
 import AnimatedIcon from '../../components/AnimatedIcon';
 import MapView from '../../components/MapView';
+import dynamic from 'next/dynamic';
+const ProductViewer = dynamic(() => import('../../components/three/ProductViewer'), {
+  ssr: false,
+  loading: () => <div className="w-full h-64 rounded-2xl bg-slate-50 animate-pulse border border-slate-100" />,
+});
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/Button';
@@ -68,16 +73,9 @@ export default function ListingDetail({ initialListing }) {
   const [isFavorited, setIsFavorited] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  // Razorpay-only checkout (personal account).
-  const [razorpayEnabled, setRazorpayEnabled] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    api.get('/payments/config')
-      .then(({ data }) => { if (!cancelled) setRazorpayEnabled(Boolean(data.razorpayEnabled)); })
-      .catch(() => { if (!cancelled) setRazorpayEnabled(false); });
-    return () => { cancelled = true; };
-  }, []);
+  // Razorpay-only checkout (personal account). If the gateway keys are
+  // missing, /payments/order answers 503 and the error toast in book()
+  // explains it.
 
   useEffect(() => {
     if (user && safeId) {
@@ -380,7 +378,11 @@ export default function ListingDetail({ initialListing }) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               {listing.images?.length ? (
-                listing.images.slice(0, 4).map((image, index) => (
+                <>
+                  <div className="sm:col-span-2">
+                    <ProductViewer images={listing.images} title={listing.title} />
+                  </div>
+                  {listing.images.slice(0, 4).map((image, index) => (
                   <div
                     key={image}
                     className={`overflow-hidden rounded-[1.8rem] border border-[rgba(37,52,42,0.08)] bg-white/70 shadow-soft ${
@@ -393,7 +395,8 @@ export default function ListingDetail({ initialListing }) {
                       className={`w-full object-cover ${index === 0 ? 'h-[20rem]' : 'h-[11rem]'}`}
                     />
                   </div>
-                ))
+                ))}
+                </>
               ) : (
                 <div className="flex min-h-[22rem] items-center justify-center rounded-[1.8rem] bg-[radial-gradient(circle_at_top,rgba(200,134,67,0.24),transparent_34%),linear-gradient(135deg,#f6efe3,#e5d8c8)] text-sm uppercase tracking-[0.25em] text-slate-500 sm:col-span-2">
                   Imagery coming soon

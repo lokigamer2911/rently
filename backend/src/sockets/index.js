@@ -47,8 +47,8 @@ function registerSocket(io) {
     // SECURITY: Accept token from either:
     // 1. Cookie (preferred — httpOnly cookie sent automatically by browser)
     // 2. auth.token fallback (for mobile clients or when cookies don't work)
-    const cookies = parseCookies(socket.handshake.headers?.cookie);
-    const token = cookies.token || socket.handshake.auth?.token;
+    const cookies = parseCookies(socket.handshake?.headers?.cookie);
+    const token = cookies.token || socket.handshake?.auth?.token;
     if (!token) return next(new Error('No token'));
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
