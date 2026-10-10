@@ -59,6 +59,75 @@ router.post('/verify', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+/**
+ * Public host search — find vendors by name so renters can browse one
+ * person's items. No auth required; only public fields are exposed.
+ */
+router.get('/search', async (req, res, next) => {
+  try {
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 50) : '';
+    if (q.length < 2) return res.json([]);
+    const hosts = await prisma.user.findMany({
+      where: { name: { contains: q, mode: 'insensitive' } },
+      select: {
+        id: true,
+        name: true,
+        avatarUrl: true,
+        bio: true,
+        isVerified: true,
+        isSuperhost: true,
+        _count: { select: { listings: { where: { available: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    res.json(hosts.map((h) => ({
+      id: h.id,
+      name: h.name,
+      avatarUrl: h.avatarUrl,
+      bio: h.bio,
+      isVerified: !!h.isVerified,
+      isSuperhost: !!h.isSuperhost,
+      listingsCount: h._count.listings,
+    })));
+  } catch (e) { next(e); }
+});
+
+/**
+ * Public vendor storefront — profile header + rating stats.
+ * Listings themselves come from GET /listings?ownerId=.
+ */
+router.get('/:id/profile', validateId, async (req, res, next) => {
+  try {
+    const u = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true, name: true, avatarUrl: true, bio: true,
+        isVerified: true, isSuperhost: true, createdAt: true,
+        _count: { select: { listings: { where: { available: true } } } },
+      },
+    });
+    if (!u || !u.name) return res.status(404).json({ error: 'Host not found' });
+    const reviewStats = await prisma.review.aggregate({
+      where: { listing: { ownerId: req.params.id } },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+    res.json({
+      id: u.id,
+      name: u.name,
+      avatarUrl: u.avatarUrl,
+      bio: u.bio,
+      isVerified: !!u.isVerified,
+      isSuperhost: !!u.isSuperhost,
+      memberSince: u.createdAt,
+      listingsCount: u._count.listings,
+      averageRating: reviewStats._avg.rating,
+      reviewCount: reviewStats._count.rating,
+    });
+  } catch (e) { next(e); }
+});
+
 router.get('/:id', requireAuth, validateId, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {

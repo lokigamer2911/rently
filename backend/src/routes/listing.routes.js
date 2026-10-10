@@ -14,6 +14,7 @@ const aiSuggestLimiter = rateLimit({
   keyGenerator: (req) => req.user.id, // rate limit per user, not IP
 });
 const { createSignedResourceAccessToken, verifySignedResourceAccessToken } = require('../utils/access');
+const { BlockedEntrySchema } = require('../utils/blockedDates');
 
 // CUID v1/v2 regex — fast guard before hitting the DB
 const CUID_RE = /^c[a-z0-9]{20,}$/i;
@@ -61,7 +62,8 @@ const ListingInput = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
   images: z.array(z.string().url()).max(10, 'Maximum 10 images allowed').default([]),
-  blockedDates: z.array(z.string()).default([]),
+  // Whole days ("YYYY-MM-DD") or exact ranges ({ start, end } ISO datetimes)
+  blockedDates: z.array(BlockedEntrySchema).max(60, 'Maximum 60 blocked entries allowed').default([]),
   categoryId: z.string(),
   requiresVerification: z.boolean().default(false),
 });
@@ -228,11 +230,13 @@ router.get('/stats/me', requireAuth, async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { q, city, categoryId, minPrice, maxPrice, lat, lng, radius, minRating } = req.query;
+    const { q, city, categoryId, ownerId, minPrice, maxPrice, lat, lng, radius, minRating } = req.query;
     const where = { available: true };
     // SECURITY: Limit search query length to prevent performance abuse
     const sanitizedQ = typeof q === 'string' ? q.trim().slice(0, 100) : null;
     if (sanitizedQ) where.title = { contains: sanitizedQ, mode: 'insensitive' };
+    // Vendor storefront: filter by owner (CUID-guarded, invalid values ignored)
+    if (typeof ownerId === 'string' && CUID_RE.test(ownerId.trim())) where.ownerId = ownerId.trim();
     
     if (lat && lng && radius) {
       const latNum = parseFloat(lat);
