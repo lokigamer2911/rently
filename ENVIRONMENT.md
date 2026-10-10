@@ -149,6 +149,11 @@ The key is never stored in the database and only its hash reaches the server, so
 cd backend && npm install && npx prisma generate && npx prisma migrate deploy
 ```
 
+> If a deploy introduces a new UNIQUE constraint on `Payment` (e.g.
+> `razorpayOrderId`), run `backend/prisma/deduplicate-payments.sql` against
+> the production database first — it deletes only older duplicate rows and is
+> a no-op when the data is already clean.
+
 ### Render Start Command
 ```bash
 cd backend && node src/index.js
