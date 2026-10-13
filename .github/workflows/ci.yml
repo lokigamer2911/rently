@@ -130,14 +130,14 @@ jobs:
 
       # Upload SARIF to GitHub Security tab
       - name: Upload Snyk Results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: snyk-backend.sarif
           category: snyk-backend
 
       - name: Upload Snyk Frontend Results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: snyk-frontend.sarif
