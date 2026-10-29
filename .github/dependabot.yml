@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # Backend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+    # Auto-merge minor/patch updates for security fixes
+    allow:
+      - dependency-type: "production"
+      - dependency-type: "development"
+    groups:
+      security-patches:
+        update-types:
+          - "patch"
+          - "minor"
+
+  # Frontend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+    allow:
+      - dependency-type: "production"
+      - dependency-type: "development"
+    groups:
+      security-patches:
+        update-types:
+          - "patch"
+          - "minor"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"

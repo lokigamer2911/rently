@@ -1,0 +1,103 @@
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const prisma = new PrismaClient();
+
+// SECURITY: the founder password never lives in the repo. Set
+// FOUNDER_SEED_PASSWORD in the environment to choose it deterministically;
+// if unset, a random one is generated and printed ONCE on first creation.
+
+async function main() {
+  console.log('Seeding database...');
+
+  // Create Categories
+  const categories = [
+    { name: 'Electronics', slug: 'electronics', icon: 'FiMonitor' },
+    { name: 'Cars', slug: 'cars', icon: 'FiTruck' },
+    { name: 'Bikes', slug: 'bikes', icon: 'FiActivity' },
+    { name: 'Tools & Equipment', slug: 'tools-equipment', icon: 'FiTool' },
+    { name: 'Photography & Video', slug: 'photography-video', icon: 'FiVideo' },
+    { name: 'Camping & Outdoors', slug: 'camping-outdoors', icon: 'FiMap' },
+  ];
+
+  for (const cat of categories) {
+    await prisma.category.upsert({
+      where: { slug: cat.slug },
+      update: {},
+      create: cat,
+    });
+  }
+
+  // Create a User
+  const user = await prisma.user.upsert({
+    where: { email: 'test@rentrex.local' },
+    update: {},
+    create: {
+      email: 'test@rentrex.local',
+      name: 'Test Host',
+      bio: 'A verified local host with premium items.',
+      role: 'ADMIN',
+      emailVerified: true,
+      passwordHash: await bcrypt.hash('Password123!', 12),
+    },
+  });
+
+  // Founder admin account (idempotent: re-running the seed updates the role
+  // but never overwrites an existing password).
+  const FOUNDER_EMAIL = 'nomulalokesh29@gmail.com';
+  const existingFounder = await prisma.user.findUnique({ where: { email: FOUNDER_EMAIL } });
+  if (!existingFounder) {
+    const envPassword = process.env.FOUNDER_SEED_PASSWORD;
+    const oneTimePassword = envPassword || ('Rently-' + crypto.randomBytes(12).toString('base64url'));
+    await prisma.user.create({
+      data: {
+        email: FOUNDER_EMAIL,
+        name: 'Lokesh',
+        role: 'ADMIN',
+        emailVerified: true,
+        passwordHash: await bcrypt.hash(oneTimePassword, 12),
+      },
+    });
+    if (envPassword) {
+      console.log(`Founder admin created -> ${FOUNDER_EMAIL} (password taken from FOUNDER_SEED_PASSWORD)`);
+    } else {
+      console.log(`Founder admin created -> ${FOUNDER_EMAIL}`);
+      console.log(`ONE-TIME PASSWORD (save it now, shown only once): ${oneTimePassword}`);
+    }
+  } else {
+    if (existingFounder.role !== 'ADMIN') {
+      await prisma.user.update({ where: { email: FOUNDER_EMAIL }, data: { role: 'ADMIN' } });
+      console.log(`Founder ${FOUNDER_EMAIL} promoted to ADMIN (password unchanged)`);
+    } else {
+      console.log(`Founder admin already present -> ${FOUNDER_EMAIL} (password unchanged)`);
+    }
+  }
+
+  // Create a Listing
+  await prisma.listing.create({
+    data: {
+      ownerId: user.id,
+      categoryId: (await prisma.category.findFirst({ where: { slug: 'photography-video' } })).id,
+      title: 'Sony A7S III + 24-70mm GM Lens',
+      description: 'Full-frame mirrorless camera perfect for low-light video production. Includes 2 batteries and a 128GB V90 card.',
+      pricePerDay: 450000, // 4500.00 Rs
+      deposit: 1000000, // 10000.00 Rs
+      city: 'Mumbai',
+      address: 'Andheri West',
+      images: JSON.stringify(['https://images.unsplash.com/photo-1516961642265-531546e84af2?auto=format&fit=crop&q=80&w=800']),
+      available: true,
+    },
+  });
+
+  console.log('Database seeded successfully!');
+  console.log('Seeded admin login -> email: test@rentrex.local  password: Password123!');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

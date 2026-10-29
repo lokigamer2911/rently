@@ -1,0 +1,214 @@
+// backend/src/app.js
+require('dotenv').config(); // Reload env config
+const logger = require('./utils/logger');
+const requestId = require('./utils/requestId'); // Add request ID middleware
+
+// PRODUCTION ENVIRONMENT VALIDATION
+// -----------------------------------
+// Ensures critical variables are present before server starts.
+// In production, missing vars cause immediate exit to prevent misconfiguration.
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  const productionRequired = ['DATABASE_URL', 'JWT_SECRET', 'CLIENT_URL', 'PORT'];
+  const missing = productionRequired.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(`❌ CRITICAL: Missing production environment variables: ${missing.join(', ')}`);
+    console.error('Exiting to prevent misconfigured production startup.');
+    process.exit(1);
+  }
+
+  // Warn about missing optional but recommended vars
+  const recommended = ['SMTP_HOST'];
+  const missingRecommended = recommended.filter(key => !process.env[key]);
+  if (missingRecommended.length > 0) {
+    console.warn(`⚠️  Optional vars not set: ${missingRecommended.join(', ')}`);
+    console.warn('Some features may be limited in production.');
+  }
+}
+
+// SECURITY: Removed automatic 'prisma db push --accept-data-loss' on production startup.
+// That command silently drops columns/data on schema drift — catastrophic for production.
+// Use 'prisma migrate deploy' in your CI/CD pipeline instead.
+
+const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+
+const authRoutes = require('./routes/auth.routes');
+const userRoutes = require('./routes/user.routes');
+const categoryRoutes = require('./routes/category.routes');
+const listingRoutes = require('./routes/listing.routes');
+const bookingRoutes = require('./routes/booking.routes');
+const paymentRoutes = require('./routes/payment.routes');
+const uploadRoutes = require('./routes/upload.routes');
+const reviewRoutes = require('./routes/review.routes');
+const chatRoutes = require('./routes/chat.routes');
+const notificationRoutes = require('./routes/notification.routes');
+const adminRoutes = require('./routes/admin.routes');
+const disputeRoutes = require('./routes/dispute.routes');
+const favoriteRoutes = require('./routes/favorite.routes');
+
+const { registerSocket } = require('./sockets');
+
+const { csrfProtection, csrfTokenEndpoint } = require('./middleware/csrf');
+
+const app = express();
+
+// Request ID middleware for distributed tracing
+app.use(requestId);
+
+// Security headers with CORS-friendly configuration
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false,
+  })
+);
+
+// Tiered Rate Limiting
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
+// SECURITY: Admin-key brute-force guard. Only failed admin-key attempts count,
+// so the owner's normal usage never trips it, but guessing is capped at 5
+// tries per 15 minutes per IP.
+const adminKeyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many invalid admin key attempts. Try again after 15 minutes.', code: 'ADMIN_KEY_RATE_LIMITED' },
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // Reduced from 20 to prevent Gemini API abuse and control costs
+  message: { error: 'AI suggestion limit reached, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', generalLimiter);
+
+const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+const allowedOrigins = [
+  clientUrl,
+  'https://rently-chi.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+];
+
+// SECURITY: Only allow our specific Vercel subdomain, NOT any *.vercel.app
+// (Anyone can deploy to Vercel — wildcard allows credential theft from attacker sites)
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin && process.env.NODE_ENV !== 'production') return callback(null, true);
+      const isAllowed = allowedOrigins.includes(origin);
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`Blocked by CORS: ${origin}`);
+        callback(new Error(`CORS origin not allowed: ${origin}`));
+      }
+    },
+    credentials: true,
+  })
+);
+
+// Razorpay webhook needs raw body — mount before json parser
+app.use(
+  '/api/payments/webhook',
+  express.raw({
+    type: 'application/json',
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
+app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
+
+// CSRF protection (production only, state-changing methods)
+app.use(csrfProtection);
+
+app.get('/health', async (_, res) => {
+  const checks = {};
+  const start = Date.now();
+
+  // 1. Database connectivity
+  try {
+    const prisma = require('./config/prisma');
+    await prisma.$queryRaw`SELECT 1`;
+    checks.database = { status: 'ok', ms: Date.now() - start };
+  } catch (e) {
+    checks.database = { status: 'error', message: e.message };
+  }
+
+  // 2. Payments — Razorpay-only checkout (personal account)
+  const razorpayConfigured = Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+  checks.razorpay = {
+    status: razorpayConfigured ? 'configured' : 'missing',
+    enabled: razorpayConfigured,
+  };
+
+  // 3. Firebase configured
+  checks.firebase = { status: process.env.FIREBASE_PROJECT_ID ? 'configured' : 'missing' };
+
+  // 4. Email service configured
+  checks.email = { status: process.env.SENDGRID_API_KEY ? 'configured' : 'missing' };
+
+  const allOk = checks.database?.status === 'ok';
+  res.status(allOk ? 200 : 503).json({
+    ok: allOk,
+    uptime: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    services: checks,
+  });
+});
+
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/listings/ai-suggest', aiLimiter);
+app.use('/api/listings', listingRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminKeyLimiter, adminRoutes);
+app.use('/api/disputes', disputeRoutes);
+app.use('/api/favorites', favoriteRoutes);
+
+// Global error handler
+app.use((err, req, res, _next) => {
+  logger.error(`[Request ID: ${req.id}] Unhandled Server Error:`, err);
+  const isProd = process.env.NODE_ENV === 'production';
+  // In production, mask internal error details to prevent information leakage
+  const errorMsg = isProd ? 'Internal server error' : (err.message || 'Server error');
+  const statusCode = err.status || 500;
+  res.status(statusCode).json({ error: errorMsg });
+});
+
+module.exports = { app, registerSocket, allowedOrigins };

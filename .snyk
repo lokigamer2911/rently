@@ -1,0 +1,26 @@
+# Snyk Policy — Rently
+# https://docs.snyk.io/snyk-ui/policies
+
+version: v1.25.0
+
+# Ignore specific vulnerabilities that are acceptable risks
+# Uncomment and add IDs as needed with justification
+# ignore:
+#   SNYK-JS-EXAMPLE-12345:
+#     - '*':
+#         reason: "Not exploitable in our context — no user input reaches this path"
+#         expires: '2026-12-31T00:00:00.000Z'
+
+# Patch vulnerabilities by upgrading specific packages
+# patch: {}
+
+# License policies — flag copyleft licenses in production deps
+license:
+  allow:
+    - MIT
+    - ISC
+    - BSD-2-Clause
+    - BSD-3-Clause
+    - Apache-2.0
+    - 0BSD
+    - Unlicense

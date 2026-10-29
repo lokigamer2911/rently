@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://rently-chi.vercel.app
+
+# Sitemaps
+Sitemap: https://rently-chi.vercel.app/sitemap.xml

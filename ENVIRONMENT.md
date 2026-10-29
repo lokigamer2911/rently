@@ -1,0 +1,202 @@
+# 🔧 Environment Variables — Deployment Guide
+
+## Architecture
+
+```
+┌─────────────────────┐     ┌─────────────────────┐     ┌──────────────┐
+│   Vercel (Frontend)  │────▶│   Render (Backend)   │────▶│ Neon.tech    │
+│   Next.js + React    │     │   Express + Socket   │     │ PostgreSQL   │
+└─────────────────────┘     └─────────────────────┘     └──────────────┘
+```
+
+---
+
+## 1. Vercel — Frontend
+
+Go to: **Vercel Dashboard → Your Project → Settings → Environment Variables**
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://your-app.onrender.com/api` | **CRITICAL** — Backend API URL |
+| `NEXT_PUBLIC_SOCKET_URL` | `https://your-app.onrender.com` | Socket.IO URL (same as backend) |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | `AIzaSy...` | Firebase Web API Key |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `your-project.firebaseapp.com` | Firebase Auth Domain |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `your-project-id` | Firebase Project ID |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | `1:123:web:abc` | Firebase App ID |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | `your-project.appspot.com` | Firebase Storage |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | `123456789` | FCM Sender ID |
+| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | `G-XXXXXXX` | Analytics (optional) |
+
+> ⚠️ `NEXT_PUBLIC_` prefix is required for Next.js to expose vars to the browser.
+
+---
+
+## 2. Render — Backend
+
+Go to: **Render Dashboard → Your Service → Environment**
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `NODE_ENV` | `production` | Enables security hardening |
+| `PORT` | `5050` | Render default, or let Render auto-assign |
+| `DATABASE_URL` | `postgresql://user:pass@ep-xxx.neon.tech/db?sslmode=require` | **Neon pooled connection** |
+| `JWT_SECRET` | `your-64-char-random-string` | Generate with: `openssl rand -base64 48` |
+| `JWT_REFRESH_SECRET` | `another-64-char-random-string` | Separate secret for refresh tokens |
+| `CSRF_SECRET` | `random-string` | Auto-generated if not set, but set one for multi-replica |
+| `ACCESS_TOKEN_SECRET` | `another-64-char-random-string` | Separate from JWT_SECRET |
+| `CLIENT_URL` | `https://rently-chi.vercel.app` | Frontend URL for CORS + emails |
+| `RAZORPAY_KEY_ID` | `rzp_test_xxxxx` | Razorpay test/live keys |
+| `RAZORPAY_KEY_SECRET` | `xxxxx` | Razorpay secret |
+| `RAZORPAY_WEBHOOK_SECRET` | `xxxxx` | Razorpay webhook signing secret |
+| `PAYMENTS_RAZORPAY_ENABLED` | `true` | Legacy flag, no longer used — checkout is Razorpay-only whenever keys are present |
+| `ADMIN_KEY_HASH` | `90a4b9863c02…` (64 hex chars) | **REQUIRED for /admin** — SHA-256 of the admin access key. Only the hash goes here; the raw key is known only to the owner |
+| `ADMIN_KEY_ID` | `founder-key-1` | Short public label stamped into admin receipts |
+| `GEMINI_API_KEY` | `AIzaSy...` | Google Gemini (for AI suggestions) |
+| `SENDGRID_API_KEY` | `SG.xxxx` | SendGrid email service |
+| `EMAIL_FROM` | `noreply@rently.in` | Sender email address |
+| `TWILIO_ACCOUNT_SID` | `ACxxxxx` | Twilio for SMS |
+| `TWILIO_AUTH_TOKEN` | `xxxxx` | Twilio auth token |
+| `TWILIO_PHONE_NUMBER` | `+91XXXXXXXXXX` | Twilio phone number |
+| `FIREBASE_PROJECT_ID` | `your-project-id` | Firebase Admin SDK |
+| `FIREBASE_CLIENT_EMAIL` | `firebase-adminsdk@...iam.gserviceaccount.com` | Firebase Admin |
+| `FIREBASE_PRIVATE_KEY` | `"-----BEGIN PRIVATE KEY-----\n..."` | Firebase Admin (with escaped newlines) |
+| `CLOUDINARY_CLOUD_NAME` | `xxxxx` | Cloudinary image uploads |
+| `CLOUDINARY_API_KEY` | `xxxxx` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | `xxxxx` | Cloudinary API secret |
+| `SNYK_TOKEN` | `xxxxx` | Snyk API token (for CI) |
+
+---
+
+## 3. Neon.tech — Database
+
+Go to: **Neon Dashboard → Your Project → Connection Details**
+
+### Connection String (use Pooled connection)
+
+```
+postgresql://neondb_owner:xxxxx@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+```
+
+> ⚠️ **Always use the pooled connection string** from Neon (port 5432, not direct connection on 5432).
+> The pooled endpoint uses pgbouncer and handles connection limits.
+
+### Neon Free Tier Limits
+- **Connections**: ~20 simultaneous (pooled)
+- **Storage**: 0.5 GB
+- **Compute**: 191.9 compute-hours/month
+- **Branches**: 10
+
+### Prisma Schema Note
+
+Your `schema.prisma` already uses PostgreSQL:
+```prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+```
+
+If Neon's pooled URL uses port `5432`, Prisma works out of the box. If you use the direct connection (for migrations), you may need to add `?pgbouncer=true` to the pooled URL.
+
+---
+
+## 4. GitHub Secrets (for CI/CD)
+
+Go to: **GitHub → Repository → Settings → Secrets and Variables → Actions**
+
+| Secret | Value | Notes |
+|--------|-------|-------|
+| `SNYK_TOKEN` | `xxxxx` | From snyk.io account settings |
+
+---
+
+## 🔐 Security Checklist
+
+- [ ] `JWT_SECRET` is 48+ random characters (run `openssl rand -base64 48`)
+- [ ] `JWT_REFRESH_SECRET` is set and different from `JWT_SECRET`
+- [ ] `CSRF_SECRET` is set for production
+- [ ] `DATABASE_URL` uses `sslmode=require`
+- [ ] `CLIENT_URL` matches your exact Vercel deployment URL
+- [ ] All `.env` files are in `.gitignore` (never committed)
+- [ ] Razorpay keys are test keys until you're ready for production
+- [ ] Firebase private key has escaped newlines (`\\n` not actual newlines)
+- [ ] `NODE_ENV=production` is set on Render
+- [ ] `ADMIN_KEY_HASH` is set (admin area stays locked without it) and the raw key is saved in a password manager, never in the repo
+
+---
+
+## 🔑 Admin Access Key
+
+The `/admin` area has two locks: the admin **login** and a separate **admin access key**.
+
+1. Generate a key (any machine with Python):
+   ```bash
+   python -c "import secrets; print('rnt_'+secrets.token_urlsafe(30))"
+   ```
+2. Hash it and put **only the hash** in the backend environment:
+   ```bash
+   python -c "import hashlib; print(hashlib.sha256(b'PASTE_THE_KEY').hexdigest())"
+   ```
+3. Save the raw key in your password manager. Opening `/admin` asks for it once per browser tab; wrong attempts are rate limited to 5 per 15 minutes per IP.
+4. To rotate (key lost, staff change): generate a new key, replace `ADMIN_KEY_HASH`, redeploy. Old keys stop working immediately.
+
+The key is never stored in the database and only its hash reaches the server, so a full database leak does not expose it.
+
+## 🚀 Deployment Commands
+
+### Render Build Command
+```bash
+cd backend && npm install && npx prisma generate && npx prisma migrate deploy
+```
+
+> If a deploy introduces a new UNIQUE constraint on `Payment` (e.g.
+> `razorpayOrderId`), run `backend/prisma/deduplicate-payments.sql` against
+> the production database first — it deletes only older duplicate rows and is
+> a no-op when the data is already clean.
+
+### Render Start Command
+```bash
+cd backend && node src/index.js
+```
+
+### Neon Migration (manual, from local)
+```bash
+cd backend
+npx prisma migrate deploy
+```
+
+### Seed initial data (categories + admin account)
+```bash
+cd backend
+npm run seed
+```
+
+Creates the six rental categories (required before anyone can publish a listing)
+and two admin logins:
+
+- Founder: `nomulalokesh29@gmail.com` — the password is only printed by the seed
+  when the account is first created; save it immediately and change it after
+  first sign-in. Re-running the seed updates the role but never resets the password.
+- Test admin: `test@rentrex.local` / `Password123!` — change or remove this
+  before going live.
+
+Remember /admin additionally requires the admin access key (ADMIN_KEY_HASH).
+
+---
+
+## 🐛 Common Issues
+
+### "Cannot read properties of undefined (reading 'cookie')"
+→ `CLIENT_URL` is not set or doesn't match your Vercel domain.
+
+### CORS error in browser console
+→ Add your Vercel URL to `allowedOrigins` in `backend/src/app.js`.
+
+### "Too many connections" from Neon
+→ Use the **pooled** connection string from Neon, not the direct one.
+
+### Socket.IO not connecting
+→ Set `NEXT_PUBLIC_SOCKET_URL` to your Render backend URL (without `/api`).
+
+### Cold start takes 30+ seconds
+→ The keep-alive ping runs every 14 minutes. First boot is still slow on Render free tier.
