@@ -66,6 +66,39 @@ app.use(
   helmet({
     crossOriginResourcePolicy: false,
     crossOriginOpenerPolicy: false,
+    // HSTS: enforce HTTPS for 1 year, include subdomains, preload eligible
+    hsts: isProduction
+      ? {
+          maxAge: 31536000, // 1 year
+          includeSubDomains: true,
+          preload: true,
+        }
+      : false,
+    // Referrer Policy
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    // Permissions Policy
+    permissionsPolicy: {
+      camera: [],
+      microphone: [],
+      geolocation: [],
+      payment: [],
+    },
+    // Content Security Policy baseline for API (stricter than frontend)
+    contentSecurityPolicy: isProduction
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'"],
+            imgSrc: ["'self'", 'data:'],
+            connectSrc: ["'self'"],
+            frameSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+          },
+        }
+      : false,
   })
 );
 

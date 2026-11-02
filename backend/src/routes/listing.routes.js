@@ -338,7 +338,63 @@ router.get('/:id', validateId, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/', requireAuth, async (req, res, next) => {
+/**
+ * Booking preview — transparent cost breakdown before checkout.
+ * No booking is created; only calculates fees so users see the total upfront.
+ */
+router.post('/:id/booking-preview', validateId, async (req, res, next) => {
+  try {
+    const { startDate, endDate, depositType } = z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+      depositType: z.enum(['CASH', 'ALTERNATIVE']).default('CASH'),
+    }).parse(req.body);
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return res.status(400).json({ error: 'Invalid booking dates' });
+    }
+    if (end <= start) return res.status(400).json({ error: 'End must be after start' });
+
+    const listing = await prisma.listing.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, title: true, pricePerDay: true, deposit: true, available: true },
+    });
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
+    if (!listing.available) return res.status(400).json({ error: 'Listing not available' });
+
+    // Conflict check — bookings that overlap the requested range
+    const overlap = await prisma.booking.findFirst({
+      where: {
+        listingId: req.params.id,
+        status: { in: ['PENDING', 'CONFIRMED', 'PICKED_UP'] },
+        AND: [{ startDate: { lt: end } }, { endDate: { gt: start } }],
+      },
+    });
+    if (overlap) return res.status(409).json({ error: 'Dates already booked' });
+
+    const days = Math.max(1, Math.ceil((end - start) / 86400000));
+    const rentalAmount = days * listing.pricePerDay;
+    const serviceFee = Math.round(rentalAmount * 0.05); // 5% platform fee
+    const depositAmount = depositType === 'CASH' ? listing.deposit : 0;
+    const totalAmount = rentalAmount + serviceFee + depositAmount;
+
+    res.json({
+      listingId: listing.id,
+      listingTitle: listing.title,
+      days,
+      rentalAmount,
+      serviceFee,
+      depositAmount,
+      totalAmount,
+      currency: 'INR',
+      platformFeePercent: 5,
+    });
+  } catch (e) { next(e); }
+});
+
+router.post('/', requireAuth, requireEmailVerified, async (req, res, next) => {
   try {
     const data = ListingInput.parse(req.body);
     // SECURITY: Verify categoryId exists to prevent FK violations and data corruption

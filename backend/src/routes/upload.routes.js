@@ -5,10 +5,12 @@ const { requireAuth } = require('../middleware/auth');
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max per image
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype?.startsWith('image/')) return cb(null, true);
-    const error = new Error('Only image uploads are allowed');
+    if (!file.mimetype) return cb(new Error('Unable to detect file type'));
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    const error = new Error('Only JPG, PNG, and WebP images are allowed');
     error.status = 400;
     cb(error);
   },

@@ -59,6 +59,29 @@ router.post('/verify', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ─── Terms of Service Acceptance ──────────────────────────────
+router.post('/terms-accept', requireAuth, async (req, res, next) => {
+  try {
+    const { accepted, version } = z.object({
+      accepted: z.boolean().refine(v => v === true, { message: 'You must accept the Terms of Service' }),
+      version: z.string().min(1).default('1.0'),
+    }).parse(req.body);
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        termsAccepted: true,
+        termsAcceptedAt: new Date(),
+        termsVersion: version,
+      },
+    });
+
+    // SECURITY: Exclude sensitive fields
+    const { passwordHash: _1, refreshToken: _2, bankAccountNumber: _3, bankIfsc: _4, bankName: _5, firebaseUid: _6, ...rest } = user;
+    res.json({ message: 'Terms of Service accepted', termsAccepted: rest.termsAccepted });
+  } catch (e) { next(e); }
+});
+
 router.get('/:id', requireAuth, validateId, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {

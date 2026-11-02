@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const prisma = require('../config/prisma');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireEmailVerified } = require('../middleware/auth');
 
 const CUID_RE = /^[a-z0-9]{20,}$/i;
 function validateId(req, res, next) {
@@ -88,7 +88,7 @@ router.get('/threads/:id', requireAuth, validateId, async (req, res, next) => {
 });
 
 // Start or get a thread with another user
-router.post('/threads', requireAuth, async (req, res, next) => {
+router.post('/threads', requireAuth, requireEmailVerified, async (req, res, next) => {
   try {
     const { targetUserId } = req.body;
     if (!targetUserId) return res.status(400).json({ error: 'targetUserId required' });
