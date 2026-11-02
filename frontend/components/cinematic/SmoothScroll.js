@@ -14,8 +14,10 @@ export default function SmoothScroll({ children }) {
     const lenis = new Lenis({
       duration: 1.0,
       easing: (t) => Math.pow(1 - t, 3), // smooth cubic-out
+      lerp: 0.1, // interpolation factor for smooth scroll (0.05-0.15 is sweet spot)
       smoothWheel: true,
       touchMultiplier: 1.2,
+      orientation: 'vertical',
     });
     window.__lenis = lenis;
 

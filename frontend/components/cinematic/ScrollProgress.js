@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
  * so CSS-only flourishes (marquee direction, orb drift) respond to scroll-up.
  *
  * Uses window.__lenis when available so the bar stays in sync with smooth scroll.
+ * Does NOT run its own RAF loop — relies on SmoothScroll's loop for lenis.raf.
  */
 export default function ScrollProgress() {
   const ref = useRef(null);
@@ -31,18 +32,12 @@ export default function ScrollProgress() {
       }
     };
 
-    const loop = (time) => {
-      if (lenis) lenis.raf(time);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-
-    // Initial update
-    update();
-
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
     };
+
+    // Initial update
+    update();
 
     if (lenis) {
       lenis.on('scroll', onScroll);

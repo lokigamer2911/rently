@@ -6,59 +6,106 @@
  * - Variants via data-cine: 'up' (default), 'fade', 'scale', 'left', 'right'
  * - Reduced-motion: skipped entirely, content stays visible
  * - SEO-safe: no CSS opacity:0 hiding; JS-only animation
- * - SSR-safe: skips on server
+ * - SSR-safe: skips on server; falls back to visible if GSAP fails to load
  */
 export function initCineReveals(scope) {
   if (typeof window === 'undefined') return () => {};
   if (!scope) scope = typeof document !== 'undefined' ? document : {};
 
-  import('gsap')
-    .then(({ default: gsap }) => {
-      return import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
-        gsap.registerPlugin(ScrollTrigger);
+  let triggers = [];
+  let gsapLoaded = false;
 
-        let triggers = [];
+  const setup = () => {
+    import('gsap')
+      .then(({ default: gsap }) => {
+        gsapLoaded = true;
+        return import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
+          gsap.registerPlugin(ScrollTrigger);
 
-        gsap.utils.toArray('.cine-reveal', scope).forEach((el) => {
-          const variant = el.dataset.cine || 'up';
-          const delay = Math.min(1, Math.max(0, parseFloat(el.dataset.delay || '0') || 0));
-
-          // Initial state (hidden, off-screen)
-          const from = revealFrom(variant, 1);
-          gsap.set(el, { ...from, opacity: 0 });
-
-          const trigger = ScrollTrigger.create({
-            trigger: el,
-            start: 'top 90%',
-            once: true,
-            onEnter: () => {
-              gsap.to(el, {
-                opacity: 1,
-                y: 0,
-                x: 0,
-                filter: 'blur(0px)',
-                scale: 1,
-                duration: 0.8,
-                ease: 'power2.out',
-                delay,
-                overwrite: 'auto',
-              });
-            },
-          });
-          triggers.push(trigger);
-        });
-
-        ScrollTrigger.refresh();
-
-        return () => {
+          // Kill any existing triggers first
           triggers.forEach((t) => t.kill());
-          ScrollTrigger.getAll().forEach((t) => t.kill());
-        };
-      });
-    })
-    .catch(() => {});
+          triggers = [];
 
-  return () => {};
+          gsap.utils.toArray('.cine-reveal', scope).forEach((el) => {
+            const variant = el.dataset.cine || 'up';
+            const delay = Math.min(1, Math.max(0, parseFloat(el.dataset.delay || '0') || 0));
+
+            // Initial state (hidden, off-screen)
+            const from = revealFrom(variant, 1);
+            gsap.set(el, { ...from, opacity: 0 });
+
+            const trigger = ScrollTrigger.create({
+              trigger: el,
+              start: 'top 88%',
+              end: 'bottom 20%',
+              once: false,
+              toggleActions: 'play none none reverse',
+              invalidateOnRefresh: true,
+              onEnter: () => {
+                gsap.to(el, {
+                  opacity: 1,
+                  y: 0,
+                  x: 0,
+                  filter: 'blur(0px)',
+                  scale: 1,
+                  duration: 0.8,
+                  ease: 'power2.out',
+                  delay,
+                  overwrite: 'auto',
+                });
+              },
+              onLeaveBack: () => {
+                gsap.to(el, {
+                  ...revealFrom(variant, 1),
+                  opacity: 0,
+                  duration: 0.6,
+                  ease: 'power2.in',
+                  overwrite: 'auto',
+                });
+              },
+            });
+            triggers.push(trigger);
+          });
+
+          ScrollTrigger.refresh();
+        });
+      })
+      .catch(() => {
+        // If GSAP fails to load, ensure all reveal elements stay visible (no permanent hide)
+        gsapLoaded = false;
+        try {
+          document.querySelectorAll('.cine-reveal').forEach((el) => {
+            el.style.opacity = '1';
+            el.style.transform = 'none';
+            el.style.filter = 'none';
+            el.style.visibility = 'visible';
+          });
+        } catch {}
+      });
+  };
+
+  setup();
+
+  // Refresh triggers on resize/orientation change to account for layout shifts
+  const onResize = () => {
+    if (gsapLoaded && typeof window !== 'undefined' && window.ScrollTrigger) {
+      window.ScrollTrigger.refresh();
+    }
+  };
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
+
+  return () => {
+    triggers.forEach((t) => t.kill());
+    triggers = [];
+    window.removeEventListener('resize', onResize);
+    window.removeEventListener('orientationchange', onResize);
+    try {
+      if (typeof window !== 'undefined' && window.ScrollTrigger) {
+        window.ScrollTrigger.getAll().forEach((t) => t.kill());
+      }
+    } catch {}
+  };
 }
 
 function revealFrom(variant, dir) {
