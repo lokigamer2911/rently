@@ -58,7 +58,9 @@ const LandingPage = () => {
   const stepRefs = useRef([]);
   const howItWorksWrap = useRef(null);
 
-  useCineReveals();
+  useEffect(() => {
+    useCineReveals();
+  }, []);
 
   // Featured items for landing-only horizontal CGI shelf
   const { data: featured } = useSWR('/listings?limit=8', fetcher, { revalidateOnFocus: false });

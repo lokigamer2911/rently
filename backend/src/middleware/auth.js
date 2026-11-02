@@ -64,4 +64,19 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, requireAdmin };
+/**
+ * requireEmailVerified — Ensures the user has verified their email address.
+ * Place after requireAuth in route chains.
+ */
+function requireEmailVerified(req, res, next) {
+  if (!req.user || req.user.emailVerified !== true) {
+    return res.status(403).json({
+      error: 'Email verification required',
+      code: 'EMAIL_NOT_VERIFIED',
+      message: 'Please verify your email address before taking this action.',
+    });
+  }
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, requireEmailVerified };

@@ -104,14 +104,15 @@ router.post('/:id/access', requireAuth, validateId, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/', requireAuth, async (req, res, next) => {
+router.post('/', requireAuth, requireEmailVerified, async (req, res, next) => {
   try {
-    const { listingId, startDate, endDate, depositType, depositNote } = z.object({
+    const { listingId, startDate, endDate, depositType, depositNote, termsAccepted } = z.object({
       listingId: z.string(),
       startDate: z.string(),
       endDate: z.string(),
       depositType: z.enum(['CASH', 'ALTERNATIVE']).default('CASH'),
       depositNote: z.string().optional(),
+      termsAccepted: z.boolean().refine(v => v === true, { message: 'You must accept the Terms of Service to book' }),
     }).parse(req.body);
 
     const start = new Date(startDate);
@@ -121,51 +122,80 @@ router.post('/', requireAuth, async (req, res, next) => {
     }
     if (end <= start) return res.status(400).json({ error: 'End must be after start' });
 
-    const listing = await prisma.listing.findUnique({ where: { id: listingId } });
-    if (!listing || !listing.available) return res.status(400).json({ error: 'Unavailable' });
-    if (listing.ownerId === req.user.id) return res.status(400).json({ error: 'You cannot book your own listing' });
+    // Use a transaction to prevent double-booking race conditions:
+    // 1. Lock the listing row (SELECT FOR UPDATE equivalent via findUnique in transaction)
+    // 2. Re-check overlap inside the transaction
+    // 3. Create booking only if no conflict
+    const result = await prisma.$transaction(async (tx) => {
+      const listing = await tx.listing.findUnique({
+        where: { id: listingId },
+      });
+      if (!listing || !listing.available) {
+        throw new Error('UNAVAILABLE');
+      }
+      if (listing.ownerId === req.user.id) {
+        throw new Error('OWN_LISTING');
+      }
 
-    // Conflict check (Bookings) — includes PICKED_UP to prevent double-booking
-    const overlap = await prisma.booking.findFirst({
-      where: {
-        listingId, status: { in: ['PENDING', 'CONFIRMED', 'PICKED_UP'] },
-        AND: [{ startDate: { lt: end } }, { endDate: { gt: start } }],
-      },
+      // Conflict check (Bookings) — includes PICKED_UP to prevent double-booking
+      const overlap = await tx.booking.findFirst({
+        where: {
+          listingId, status: { in: ['PENDING', 'CONFIRMED', 'PICKED_UP'] },
+          AND: [{ startDate: { lt: end } }, { endDate: { gt: start } }],
+        },
+      });
+      if (overlap) {
+        throw new Error('DATES_BOOKED');
+      }
+
+      // Conflict check (Blocked Dates)
+      const blockedDates = parseJsonArray(listing.blockedDates);
+      const hasBlockedOverlap = blockedDates.some(dateStr => {
+        const bDate = new Date(dateStr);
+        const sDate = new Date(start.toISOString().split('T')[0]);
+        const eDate = new Date(end.toISOString().split('T')[0]);
+        return bDate >= sDate && bDate <= eDate;
+      });
+      if (hasBlockedOverlap) {
+        throw new Error('BLOCKED_DATES');
+      }
+
+      const days = Math.max(1, Math.ceil((end - start) / 86400000));
+      const rentalAmount = days * listing.pricePerDay;
+      const serviceFee = Math.round(rentalAmount * 0.05);
+      const depositAmount = depositType === 'CASH' ? listing.deposit : 0;
+      const totalAmount = rentalAmount + serviceFee + depositAmount;
+      const handoverOTP = generateOTP();
+
+      const booking = await tx.booking.create({
+        data: {
+          listingId,
+          renterId: req.user.id,
+          startDate: start,
+          endDate: end,
+          serviceFee,
+          totalAmount,
+          depositType,
+          depositNote,
+          handoverOTP,
+          termsAccepted: true,
+          termsAcceptedAt: new Date(),
+        },
+      });
+
+      return { booking, listing, days, rentalAmount, serviceFee, depositAmount, totalAmount, handoverOTP };
     });
-    if (overlap) return res.status(409).json({ error: 'Dates already booked' });
 
-    // Conflict check (Blocked Dates)
-    const blockedDates = parseJsonArray(listing.blockedDates);
-    const hasBlockedOverlap = blockedDates.some(dateStr => {
-      const bDate = new Date(dateStr);
-      const sDate = new Date(start.toISOString().split('T')[0]);
-      const eDate = new Date(end.toISOString().split('T')[0]);
-      return bDate >= sDate && bDate <= eDate;
-    });
-    if (hasBlockedOverlap) return res.status(409).json({ error: 'Selected dates include blocked dates' });
+    if (result instanceof Error) {
+      const msg = result.message;
+      if (msg === 'UNAVAILABLE') return res.status(400).json({ error: 'Listing not available' });
+      if (msg === 'OWN_LISTING') return res.status(400).json({ error: 'You cannot book your own listing' });
+      if (msg === 'DATES_BOOKED') return res.status(409).json({ error: 'Dates already booked' });
+      if (msg === 'BLOCKED_DATES') return res.status(409).json({ error: 'Selected dates include blocked dates' });
+      return res.status(500).json({ error: 'Booking failed' });
+    }
 
-    const days = Math.ceil((end - start) / 86400000);
-    const rentalAmount = days * listing.pricePerDay;
-    const serviceFee = Math.round(rentalAmount * 0.05);
-    const depositAmount = depositType === 'CASH' ? listing.deposit : 0;
-    const totalAmount = rentalAmount + serviceFee + depositAmount;
-    const handoverOTP = generateOTP();
-
-    // Create booking — race condition window is small (between overlap check and create).
-    // For higher scale, use SELECT FOR UPDATE or a DB-level unique constraint on date ranges.
-    const booking = await prisma.booking.create({
-      data: {
-        listingId,
-        renterId: req.user.id,
-        startDate: start,
-        endDate: end,
-        serviceFee,
-        totalAmount,
-        depositType,
-        depositNote,
-        handoverOTP
-      },
-    });
+    const { booking, listing, days, rentalAmount, serviceFee, depositAmount, totalAmount, handoverOTP } = result;
 
     // Notify owner (Real-time + email)
     const io = req.app.get('io');

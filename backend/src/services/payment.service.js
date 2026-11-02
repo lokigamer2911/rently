@@ -16,6 +16,7 @@ const STATUS = {
 
 const METHOD = {
   RAZORPAY: 'RAZORPAY',
+  MANUAL: 'MANUAL',
 };
 
 /** Tell both parties the booking is locked in. */

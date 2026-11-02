@@ -64,7 +64,7 @@ function isRazorpayConfigured() {
 
 /**
  * Which payment method checkout should use right now.
- * Razorpay-only checkout (personal account).
+ * Razorpay-only checkout (personal account) with UPI QR / bank transfer fallback.
  */
 router.get('/config', (_req, res) => {
   const razorpayEnabled = isRazorpayConfigured();
@@ -73,7 +73,24 @@ router.get('/config', (_req, res) => {
     method: METHOD.RAZORPAY,
     razorpayEnabled,
     upiQrEnabled: false,
-    notice: razorpayEnabled ? null : 'Razorpay keys are not configured yet. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.',
+    fallbackEnabled: true,
+    fallbackOptions: [
+      {
+        id: 'UPI_QR',
+        name: 'UPI QR Code',
+        description: 'Scan to pay via any UPI app (PhonePe, Google Pay, Paytm)',
+        instructions: 'Scan the QR code shown at checkout and share the transaction ID with the host.',
+      },
+      {
+        id: 'BANK_TRANSFER',
+        name: 'Bank Transfer',
+        description: 'NEFT/IMPS to host account',
+        instructions: 'Transfer to the host account details shown at checkout and share the UTR number.',
+      },
+    ],
+    notice: razorpayEnabled
+      ? null
+      : 'Razorpay keys are not configured yet. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET for instant online payments. UPI QR and Bank Transfer remain available.',
     supportContact: null,
     payeeCount: 0,
   });
@@ -241,6 +258,78 @@ router.post('/webhook', async (req, res) => {
     console.error(e);
     res.status(500).send('err');
   }
+});
+
+// Manual payment confirmation — UPI QR / Bank Transfer fallback
+// User submits transaction ID/UTR after paying outside Razorpay.
+// Host/admin verifies manually; booking is marked PENDING until confirmed.
+router.post('/manual-confirm', requireAuth, requireEmailVerified, async (req, res, next) => {
+  try {
+    const { bookingId, method, transactionId, notes } = z.object({
+      bookingId: z.string(),
+      method: z.enum(['UPI_QR', 'BANK_TRANSFER']),
+      transactionId: z.string().min(3).max(100),
+      notes: z.string().optional(),
+    }).parse(req.body);
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { payment: true },
+    });
+    if (!booking || booking.renterId !== req.user.id)
+      return res.status(403).json({ error: 'Forbidden' });
+    if (booking.status !== 'PENDING')
+      return res.status(400).json({ error: 'Booking cannot be updated' });
+
+    const existingPayment = await prisma.payment.findUnique({ where: { bookingId } });
+    if (existingPayment && existingPayment.status === 'PAID')
+      return res.status(400).json({ error: 'Payment already recorded' });
+
+    await prisma.payment.upsert({
+      where: { bookingId },
+      update: {
+        method: METHOD.MANUAL,
+        razorpayPaymentId: null,
+        razorpaySignature: null,
+        status: STATUS.PENDING,
+        updatedAt: new Date(),
+      },
+      create: {
+        bookingId,
+        razorpayOrderId: `MANUAL-${Date.now()}`,
+        method: METHOD.MANUAL,
+        amount: booking.totalAmount,
+        status: STATUS.PENDING,
+      },
+    });
+
+    // Store manual payment details — in production, save transactionId to a
+    // manualPaymentDetails JSON field on Payment or Booking for host review.
+    // For now, attach to booking notes.
+    await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        depositNote: booking.depositNote
+          ? `${booking.depositNote}\n[Manual Payment] ${method}: ${transactionId}${notes ? ` — ${notes}` : ''}`
+          : `[Manual Payment] ${method}: ${transactionId}${notes ? ` — ${notes}` : ''}`,
+      },
+    });
+
+    // Notify owner of manual payment pending review
+    const io = req.app.get('io');
+    await createNotification(io, {
+      userId: booking.listingId && (await prisma.listing.findUnique({
+        where: { id: booking.listingId },
+        select: { ownerId: true },
+      }))?.ownerId || booking.listingId,
+      type: 'PAYMENT_PENDING',
+      title: 'Manual payment pending review',
+      body: `A renter has submitted a ${method} payment for booking #${booking.id.slice(-6)}. Please verify and confirm.`,
+      link: '/bookings',
+    });
+
+    res.json({ ok: true, message: 'Manual payment submitted. Awaiting host verification.' });
+  } catch (e) { next(e); }
 });
 
 module.exports = router;

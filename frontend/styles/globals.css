@@ -877,29 +877,8 @@ html.lenis, html.lenis body { height: auto; }
 .btn-magnetic:active { transition-duration: 0.1s; }
 .magnetic-wrap { will-change: transform; }
 
-/* Custom cursor — desktop only */
-.cursor-dot, .cursor-ring { display: none; }
-body.has-custom-cursor { cursor: none; }
-body.has-custom-cursor a, body.has-custom-cursor button { cursor: none; }
-/* Keep native text cursor over inputs for usability */
-body.has-custom-cursor input, body.has-custom-cursor textarea,
-body.has-custom-cursor select, body.has-custom-cursor [contenteditable] { cursor: auto; }
-body.has-custom-cursor .cursor-dot {
-  display: block; position: fixed; top: -3px; left: -3px; width: 6px; height: 6px;
-  background: #0f172a; border-radius: 50%; z-index: 120; pointer-events: none;
-}
-body.has-custom-cursor .cursor-ring {
-  display: flex; position: fixed; top: -19px; left: -19px; width: 38px; height: 38px;
-  border: 1.5px solid rgba(15,23,42,0.3); border-radius: 50%; z-index: 119;
-  pointer-events: none; align-items: center; justify-content: center;
-  transition: width 0.25s, height 0.25s, top 0.25s, left 0.25s, border-color 0.25s, background 0.25s;
-}
-body.has-custom-cursor.cursor-hover .cursor-ring {
-  top: -29px; left: -29px; width: 58px; height: 58px;
-  border-color: rgba(16,185,129,0.6); background: rgba(16,185,129,0.08);
-}
-.dark body.has-custom-cursor .cursor-dot { background: #e2e8f0; }
-.dark body.has-custom-cursor .cursor-ring { border-color: rgba(226,232,240,0.35); }
+/* Cursor — always native, reduced-motion friendly */
+body { cursor: auto; }
 
 /* Shader background */
 .shader-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }

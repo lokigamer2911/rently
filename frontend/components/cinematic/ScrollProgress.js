@@ -4,17 +4,25 @@ import { useEffect, useRef } from 'react';
  * Thin top scroll-progress bar (global, non-intrusive).
  * Also broadcasts scroll direction on <body data-scroll-dir="up|down">
  * so CSS-only flourishes (marquee direction, orb drift) respond to scroll-up.
+ *
+ * Uses window.__lenis when available so the bar stays in sync with smooth scroll.
+ * Does NOT run its own RAF loop — relies on SmoothScroll's loop for lenis.raf.
  */
 export default function ScrollProgress() {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    const lenis = window.__lenis;
     let raf = 0;
-    let lastY = window.scrollY;
+    let lastY = 0;
+
+    const getY = () => (lenis ? lenis.scroll : window.scrollY);
+
     const update = () => {
       raf = 0;
-      const y = window.scrollY;
+      const y = getY();
       const h = document.documentElement.scrollHeight - window.innerHeight;
       const p = h > 0 ? Math.min(1, y / h) : 0;
       el.style.transform = `scaleX(${p.toFixed(4)})`;
@@ -23,16 +31,29 @@ export default function ScrollProgress() {
         lastY = y;
       }
     };
+
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
     };
+
+    // Initial update
     update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+
+    if (lenis) {
+      lenis.on('scroll', onScroll);
+    } else {
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll);
+    }
+
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      if (raf) cancelAnimationFrame(raf);
+      cancelAnimationFrame(raf);
+      if (lenis) {
+        lenis.off('scroll', onScroll);
+      } else {
+        window.removeEventListener('scroll', onScroll);
+        window.removeEventListener('resize', onScroll);
+      }
       try { delete document.body.dataset.scrollDir; } catch {}
     };
   }, []);

@@ -83,19 +83,24 @@ export default function Layout({ children }) {
                 <h3 className="font-bold text-xs uppercase tracking-wider text-slate-900 mb-4">Legal</h3>
                 <ul className="space-y-2.5 text-sm">
                   <li>
-                    <a href="#" className="text-slate-500 hover:text-slate-900 transition">
+                    <Link href="/privacy" className="text-slate-500 hover:text-slate-900 transition">
                       Privacy Policy
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a href="#" className="text-slate-500 hover:text-slate-900 transition">
+                    <Link href="/terms" className="text-slate-500 hover:text-slate-900 transition">
                       Terms of Service
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a href="#" className="text-slate-500 hover:text-slate-900 transition">
+                    <Link href="/cancellation-policy" className="text-slate-500 hover:text-slate-900 transition">
+                      Cancellation &amp; Refund
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/contact" className="text-slate-500 hover:text-slate-900 transition">
                       Contact Us
-                    </a>
+                    </Link>
                   </li>
                 </ul>
               </div>

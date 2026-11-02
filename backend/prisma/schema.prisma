@@ -47,6 +47,11 @@ model User {
   lastLoginIp  String?
   userAgent    String?
 
+  // Terms of Service acceptance
+  termsAccepted     Boolean   @default(false)
+  termsAcceptedAt   DateTime?
+  termsVersion      String?   // Version of terms accepted
+
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   bookings      Booking[]      @relation("Renter")

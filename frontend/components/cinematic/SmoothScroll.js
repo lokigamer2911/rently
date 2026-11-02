@@ -3,18 +3,21 @@ import Lenis from 'lenis';
 import { isReducedMotion } from '../../lib/cinematic';
 
 /**
- * Global smooth-scroll provider. Same UI, buttery motion.
+ * Global smooth-scroll provider — buttery, lightweight lenis.
  * - Disabled when prefers-reduced-motion
- * - Exposes window.__lenis for ScrollTrigger sync
+ * - Native scroll restores immediately on page leave
+ * - Exposes window.__lenis for any ScrollTrigger sync
  */
 export default function SmoothScroll({ children }) {
   useEffect(() => {
     if (isReducedMotion()) return;
     const lenis = new Lenis({
-      duration: 1.15,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      duration: 1.0,
+      easing: (t) => Math.pow(1 - t, 3), // smooth cubic-out
+      lerp: 0.1, // interpolation factor for smooth scroll (0.05-0.15 is sweet spot)
       smoothWheel: true,
-      touchMultiplier: 1.4,
+      touchMultiplier: 1.2,
+      orientation: 'vertical',
     });
     window.__lenis = lenis;
 
