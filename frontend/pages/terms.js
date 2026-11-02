@@ -59,7 +59,7 @@ export default function TermsOfService() {
         <section className="mb-8">
           <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-3">6. Cancellations & Refunds</h2>
           <p className="text-slate-600 leading-relaxed mb-3">
-            See our <Link href="/cancellation-policy" className="text-slate-900 underline">Cancellation &amp; Refund Policy</a> for details on cancellation windows and refund eligibility.
+            See our <Link href="/cancellation-policy" className="text-slate-900 underline">Cancellation &amp; Refund Policy</Link> for details on cancellation windows and refund eligibility.
           </p>
         </section>
 
