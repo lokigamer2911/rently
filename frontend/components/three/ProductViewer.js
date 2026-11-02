@@ -59,9 +59,36 @@ export default function ProductViewer({ images = [], title = '' }) {
   const [mode, setMode] = useState('turntable'); // turntable | exploded
   const [autoRotate, setAutoRotate] = useState(true);
   const [index, setIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
   const url = images[index] || images[0];
 
   if (!url) return null;
+
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+    setTouchEnd(null);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const diff = touchStart - touchEnd;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        // Swipe left - next image
+        setIndex((i) => (i + 1) % images.length);
+      } else {
+        // Swipe right - previous image
+        setIndex((i) => (i - 1 + images.length) % images.length);
+      }
+    }
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
 
   return (
     <div className="product-viewer">
@@ -73,7 +100,13 @@ export default function ProductViewer({ images = [], title = '' }) {
           <button type="button" onClick={() => setAutoRotate((v) => !v)}>{autoRotate ? 'Pause' : 'Spin'}</button>
         </div>
       </div>
-      <div className="product-viewer-canvas">
+      <div
+        className="product-viewer-canvas"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'pan-x' }}
+      >
         <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0.4, 4.2], fov: 40 }} gl={{ antialias: true, alpha: true }}>
           <ambientLight intensity={0.8} />
           <directionalLight position={[5, 6, 4]} intensity={1.4} />

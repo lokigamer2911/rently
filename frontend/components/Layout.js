@@ -6,8 +6,17 @@ import Button from './Button';
 export default function Layout({ children }) {
   return (
     <div className="min-h-screen">
-      <Navbar />
-      <main className="page-shell pb-24 pt-8 md:pb-20 md:pt-10">{children}</main>
+      {/* Skip to content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-slate-900 focus:border-brand-600 focus:rounded-md"
+      >
+        Skip to main content
+      </a>
+      <Navbar aria-label="Main navigation" />
+      <main id="main-content" className="page-shell pb-24 pt-8 md:pb-20 md:pt-10" tabIndex={-1} onFocus={() => {}}>
+        {children}
+      </main>
 
       <footer className="page-shell pb-24 md:pb-12">
         <div className="surface-card space-y-12">

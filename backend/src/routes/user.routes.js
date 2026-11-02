@@ -82,6 +82,68 @@ router.post('/terms-accept', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ─── Onboarding Completion ──────────────────────────────────
+router.post('/onboarding/complete', requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        onboardingCompleted: true,
+        onboardingCompletedAt: new Date(),
+      },
+    });
+
+    const { passwordHash: _1, refreshToken: _2, bankAccountNumber: _3, bankIfsc: _4, bankName: _5, firebaseUid: _6, ...rest } = user;
+    res.json({ message: 'Onboarding completed', onboardingCompleted: rest.onboardingCompleted });
+  } catch (e) { next(e); }
+});
+
+// ─── Saved Searches ─────────────────────────────────────────
+router.get('/saved-searches', requireAuth, async (req, res, next) => {
+  try {
+    const searches = await prisma.savedSearch.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(searches);
+  } catch (e) { next(e); }
+});
+
+router.post('/saved-searches', requireAuth, async (req, res, next) => {
+  try {
+    const { query, city, categoryId, minPrice, maxPrice, categoryName } = z.object({
+      query: z.string().optional(),
+      city: z.string().optional(),
+      categoryId: z.string().optional(),
+      minPrice: z.number().optional(),
+      maxPrice: z.number().optional(),
+      categoryName: z.string().optional(),
+    }).parse(req.body);
+
+    const search = await prisma.savedSearch.create({
+      data: {
+        userId: req.user.id,
+        query: query || null,
+        city: city || null,
+        categoryId: categoryId || null,
+        minPrice: minPrice || null,
+        maxPrice: maxPrice || null,
+        categoryName: categoryName || null,
+      },
+    });
+    res.json(search);
+  } catch (e) { next(e); }
+});
+
+router.delete('/saved-searches/:id', requireAuth, validateId, async (req, res, next) => {
+  try {
+    await prisma.savedSearch.delete({
+      where: { id: req.params.id },
+    });
+    res.json({ message: 'Deleted' });
+  } catch (e) { next(e); }
+});
+
 router.get('/:id', requireAuth, validateId, async (req, res, next) => {
   try {
     if (req.params.id !== req.user.id) {

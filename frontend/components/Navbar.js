@@ -58,13 +58,17 @@ export default function Navbar() {
     { href: '/listings', label: 'Discover', show: true },
     { href: '/listings/new', label: 'Host an Item', show: !!user },
     { href: '/chat', label: 'Messages', show: !!user },
+    { href: '/saved-searches', label: 'Saved Searches', show: !!user },
     { href: '/admin', label: 'Admin', show: user?.role === 'ADMIN' },
   ];
 
   return (
     <>
       {/* ===== DESKTOP NAV (md+) ===== */}
-      <header className={`hidden md:block sticky top-0 z-50 px-4 pt-4 md:px-5 transition-transform duration-500 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-[110%]'}`}>
+      <header
+        className={`hidden md:block sticky top-0 z-50 px-4 pt-4 md:px-5 transition-transform duration-500 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-[110%]'}`}
+        aria-label="Main navigation"
+      >
         <div className="page-shell space-y-3">
           <div className="nav-shell flex flex-wrap items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-3 group">
@@ -95,7 +99,7 @@ export default function Navbar() {
                 {theme === 'dark' ? <FiSun size={18} /> : <FiMoon size={18} />}
               </Button>
 
-              <Button href="/notifications" variant="ghost" className="relative !h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label="Notifications">
+              <Button href="/notifications" variant="ghost" className="relative !h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label={`Notifications (${unreadCount} unread)`}>
                 <FiBell size={18} />
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white border-2 border-white">
@@ -104,7 +108,7 @@ export default function Navbar() {
                 )}
               </Button>
 
-              <Button href="/cart" variant="ghost" className="relative !h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label="Open cart">
+              <Button href="/cart" variant="ghost" className="relative !h-12 !w-12 !rounded-2xl !px-0 !py-0" aria-label={`Cart (${totalItems} items)`}>
                 <FiShoppingCart size={18} />
                 {totalItems > 0 && (
                   <span className="absolute -right-2 -top-2 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-semibold text-white">
@@ -182,7 +186,7 @@ export default function Navbar() {
       </header>
 
       {/* ===== MOBILE TOP BAR (always visible, minimal) ===== */}
-      <header className="md:hidden sticky top-0 z-50 px-3 pt-3">
+      <header className="md:hidden sticky top-0 z-50 px-3 pt-3" aria-label="Mobile navigation">
         <div className="flex items-center justify-between gap-3 bg-white/80 backdrop-blur-xl rounded-2xl px-4 py-3 border border-white/60 shadow-lg">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="h-9 w-9 overflow-hidden rounded-xl bg-white shadow-sm">
@@ -234,12 +238,12 @@ export default function Navbar() {
       {/* ===== MOBILE BOTTOM NAVIGATION ===== */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-[rgba(15,23,42,0.06)] pb-safe shadow-[0_-10px_40px_-10px_rgba(0,0,0,0.05)]">
         <div className="flex items-center justify-around px-2 py-2" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
-          <Link href="/listings" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname === '/listings' || router.pathname.startsWith('/listings') ? 'text-brand-600' : 'text-slate-400'}`}>
+          <Link href="/listings" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname === '/listings' || router.pathname.startsWith('/listings') ? 'text-brand-600' : 'text-slate-400'}`} aria-label="Discover marketplace">
             <FiCompass size={22} />
             <span className="text-[10px] font-semibold">Discover</span>
           </Link>
 
-          <Link href="/listings/new" className="flex flex-col items-center gap-0.5 text-slate-400">
+          <Link href="/listings/new" className="flex flex-col items-center gap-0.5 text-slate-400" aria-label="Host an item">
             <div className="bg-brand-600 text-white p-2.5 rounded-full -mt-4 shadow-lg shadow-brand-500/30">
               <FiPackage size={20} />
             </div>
@@ -248,7 +252,7 @@ export default function Navbar() {
 
           {user ? (
             <>
-              <Link href="/chat" className={`relative flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/chat') ? 'text-brand-600' : 'text-slate-400'}`}>
+              <Link href="/chat" className={`relative flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/chat') ? 'text-brand-600' : 'text-slate-400'}`} aria-label={`Messages (${unreadChats > 0 ? unreadChats : 0} unread)`}>
                 <FiMessageCircle size={22} />
                 {unreadChats > 0 && (
                   <span className="absolute top-0 right-2 inline-flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-red-500 px-1 text-[8px] font-bold text-white">
@@ -257,13 +261,13 @@ export default function Navbar() {
                 )}
                 <span className="text-[10px] font-semibold">Chat</span>
               </Link>
-              <Link href="/bookings" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/bookings') ? 'text-brand-600' : 'text-slate-400'}`}>
+              <Link href="/bookings" className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${router.pathname.startsWith('/bookings') ? 'text-brand-600' : 'text-slate-400'}`} aria-label="Orders">
                 <FiClock size={22} />
                 <span className="text-[10px] font-semibold">Orders</span>
               </Link>
             </>
           ) : (
-            <Link href={`/auth/login?redirect=${encodeURIComponent(router.asPath)}`} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-slate-400">
+            <Link href={`/auth/login?redirect=${encodeURIComponent(router.asPath)}`} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl text-slate-400" aria-label="Sign in">
               <FiUser size={22} />
               <span className="text-[10px] font-semibold">Sign in</span>
             </Link>
