@@ -21,8 +21,9 @@ import {
 } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
 import AnimatedIcon from '../../components/AnimatedIcon';
-import MapView from '../../components/MapView';
+import AvailabilityCalendar from '../../components/AvailabilityCalendar';
 import dynamic from 'next/dynamic';
+const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
 const ProductViewer = dynamic(() => import('../../components/three/ProductViewer'), {
   ssr: false,
   loading: () => <div className="w-full h-64 rounded-2xl bg-slate-50 animate-pulse border border-slate-100" />,
@@ -341,6 +342,12 @@ export default function ListingDetail({ initialListing }) {
                   <FiUser size={13} />
                   Hosted by {listing.owner?.name || 'Verified owner'}
                 </span>
+                {listing.owner?.isVerified && (
+                  <span className="floating-pill !text-emerald-700 !bg-emerald-50 !border-emerald-200">
+                    <FiShield size={13} />
+                    Verified Host
+                  </span>
+                )}
                 {avgRating && (
                   <span className="floating-pill">
                     <FiStar size={13} />
@@ -596,31 +603,27 @@ export default function ListingDetail({ initialListing }) {
                 </div>
 
                 {hasUnavailableDates && (
-                  <div className="rounded-[1.6rem] border border-[rgba(37,52,42,0.08)] bg-[rgba(36,60,45,0.96)] p-4 text-sm text-white">
-                    {booked?.bookings?.length > 0 && (
-                      <>
-                        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Booked windows</p>
-                        <div className="space-y-2 text-white/84 mb-4">
-                          {booked.bookings.map((range, index) => (
-                            <p key={`${range.startDate}-${index}`}>
-                              {new Date(range.startDate).toLocaleDateString()} to {new Date(range.endDate).toLocaleDateString()}
-                            </p>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    {booked?.blockedDates?.length > 0 && (
-                      <>
-                        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Host Blocked Dates</p>
-                        <div className="flex flex-wrap gap-2 text-white/84">
-                          {booked.blockedDates.map((date, index) => (
-                            <span key={`${date}-${index}`} className="bg-white/10 px-2 py-1 rounded-md text-xs">
-                              {new Date(date).toLocaleDateString()}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    )}
+                  <div className="rounded-[1.6rem] border border-[rgba(37,52,42,0.08)] bg-white/70 p-5">
+                    <div className="mb-4 flex items-center gap-2">
+                      <FiCalendar size={16} className="text-brand-600" />
+                      <h3 className="text-base font-bold text-slate-900">Availability Calendar</h3>
+                    </div>
+                    <AvailabilityCalendar
+                      blockedDates={booked?.blockedDates || []}
+                      bookedDates={booked?.bookings || []}
+                      selectedStart={start}
+                      selectedEnd={end}
+                      onDateSelect={(dateStr) => {
+                        if (!start) {
+                          setStart(dateStr);
+                        } else if (!end || dateStr < start) {
+                          setStart(dateStr);
+                          setEnd('');
+                        } else {
+                          setEnd(dateStr);
+                        }
+                      }}
+                    />
                   </div>
                 )}
 

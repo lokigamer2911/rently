@@ -1,16 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
-import { FiMapPin, FiSearch, FiSliders, FiTag, FiX, FiCheck, FiLoader } from 'react-icons/fi';
+import { FiMapPin, FiSearch, FiSliders, FiTag, FiX, FiCheck, FiLoader, FiBell } from 'react-icons/fi';
 import useSWR from 'swr';
+import toast from 'react-hot-toast';
 import { fetcher, api } from '../../lib/api';
 import ListingCard from '../../components/ListingCard';
 import TiltCard from '../../components/TiltCard';
 import Button from '../../components/Button';
-import MapView from '../../components/MapView';
+import dynamic from 'next/dynamic';
+const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
 import { useJsApiLoader } from '@react-google-maps/api';
+import { useAuth } from '../../hooks/useAuth';
+import { useRouter } from 'next/router';
 
 const libraries = ['places'];
 
 export default function Listings() {
+  const router = useRouter();
   const [q, setQ] = useState('');
   const [city, setCity] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -27,6 +32,8 @@ export default function Listings() {
   const [lng, setLng] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState('grouped'); // 'grouped' | 'list' | 'map'
+  const { user } = useAuth();
+  const [savingSearch, setSavingSearch] = useState(false);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -61,6 +68,28 @@ export default function Listings() {
     setMinPrice('');
     setMaxPrice('');
     setMinRating('');
+  };
+
+  const saveSearch = async () => {
+    if (!user) {
+      return router.push(`/auth/login?redirect=${encodeURIComponent(router.asPath)}`);
+    }
+    try {
+      setSavingSearch(true);
+      await api.post('/saved-searches', {
+        query: q || null,
+        city: city || null,
+        categoryId: categoryId || null,
+        minPrice: minPrice ? parseInt(minPrice) : null,
+        maxPrice: maxPrice ? parseInt(maxPrice) : null,
+        categoryName: categories?.find(c => c.id === categoryId)?.name || null,
+      });
+      toast.success('Search saved! You will be notified when new matching items are listed.');
+    } catch (err) {
+      toast.error('Failed to save search');
+    } finally {
+      setSavingSearch(false);
+    }
   };
 
   useEffect(() => {
@@ -197,9 +226,28 @@ export default function Listings() {
               </div>
             )}
           </div>
-          <Button variant="primary" className="!h-12 sm:!h-14 !px-6 sm:!px-8 text-sm sm:text-lg shadow-brand">
-            Search
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="primary" className="!h-12 sm:!h-14 !px-6 sm:!px-8 text-sm sm:text-lg shadow-brand">
+              Search
+            </Button>
+            {user && (
+              <Button
+                variant="ghost"
+                onClick={saveSearch}
+                disabled={savingSearch}
+                className="!h-12 sm:!h-14 !px-6 sm:!px-8 text-sm sm:text-lg"
+              >
+                {savingSearch ? (
+                  <FiLoader size={18} className="animate-spin" />
+                ) : (
+                  <>
+                    <FiBell size={18} />
+                    <span className="ml-2 hidden sm:inline">Save Search</span>
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 

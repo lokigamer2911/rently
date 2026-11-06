@@ -22,6 +22,10 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.get('/users/me', useFallbackToken ? { __useAuthFallback: true } : undefined);
       setUser(data);
+      // Redirect to onboarding if not completed
+      if (typeof window !== 'undefined' && !data.onboardingCompleted && !window.location.pathname.startsWith('/onboarding') && !window.location.pathname.startsWith('/auth')) {
+        window.location.href = '/onboarding';
+      }
     } catch (err) {
       if (err.response?.status === 401) {
         const hasFallbackToken = !!getStoredAuthToken();
