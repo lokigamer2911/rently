@@ -7,7 +7,8 @@ import { HiSparkles } from 'react-icons/hi';
 import { useAuth } from '../../hooks/useAuth';
 import Link from 'next/link';
 import { api } from '../../lib/api';
-import MapView from '../../components/MapView';
+import dynamic from 'next/dynamic';
+const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
 import Button from '../../components/Button';
 import TermsModal from '../../components/TermsModal';
 

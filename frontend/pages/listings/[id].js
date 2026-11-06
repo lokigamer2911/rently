@@ -21,9 +21,9 @@ import {
 } from 'react-icons/fi';
 import { api, fetcher } from '../../lib/api';
 import AnimatedIcon from '../../components/AnimatedIcon';
-import MapView from '../../components/MapView';
 import AvailabilityCalendar from '../../components/AvailabilityCalendar';
 import dynamic from 'next/dynamic';
+const MapView = dynamic(() => import('../../components/MapView'), { ssr: false });
 const ProductViewer = dynamic(() => import('../../components/three/ProductViewer'), {
   ssr: false,
   loading: () => <div className="w-full h-64 rounded-2xl bg-slate-50 animate-pulse border border-slate-100" />,
